@@ -174,6 +174,43 @@
   .empty-state b{ color: var(--ivory); }
 
   footer.page-footer{ margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--hairline); color: var(--ivory-dim); font-size: 13px; }
+
+  /* relance */
+  .tile.relance{ --tile-color: var(--terracotta); }
+  .relance-badge{
+    display:inline-flex; align-items:center; gap:5px; margin-top:8px;
+    font-family:"Cormorant SC",serif; font-size: 11px; letter-spacing:.05em; text-transform: uppercase;
+    color: var(--navy); background: var(--terracotta); border-radius: 4px; padding: 3px 8px 3px 7px;
+  }
+
+  /* tabs */
+  .tabs{ display:flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--hairline); }
+  .tab-btn{
+    border: none; border-bottom: 2px solid transparent; border-radius: 0; background: transparent;
+    color: var(--ivory-dim); padding: 10px 4px; margin-right: 22px; font-size: 14px;
+  }
+  .tab-btn:hover{ color: var(--gold); border-color: transparent; }
+  .tab-btn.active{ color: var(--gold); border-bottom-color: var(--gold); }
+
+  /* analytics */
+  .kpi-row{ display:grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
+  @media (max-width: 720px){ .kpi-row{ grid-template-columns: repeat(2, 1fr); } }
+  .kpi-card{ background: var(--navy-2); border: 1px solid var(--hairline); border-radius: var(--radius); padding: 16px 16px; }
+  .kpi-card .v{ font-family:"Cinzel", serif; font-size: 26px; color: var(--gold); }
+  .kpi-card .l{ font-size: 12.5px; color: var(--ivory-dim); margin-top: 6px; }
+  .an-section{ margin-bottom: 20px; }
+  .an-section h2{ font-size: 18px; margin-bottom: 14px; }
+  .an-bar-row{ display:grid; grid-template-columns: 170px 1fr 90px; align-items:center; gap: 12px; margin-bottom: 10px; font-size: 15px; }
+  @media (max-width: 640px){ .an-bar-row{ grid-template-columns: 110px 1fr 70px; font-size: 13.5px; } }
+  .an-bar-row .lbl{ color: var(--ivory); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .an-bar-track{ background: rgba(253,246,228,0.08); border-radius: 4px; height: 12px; overflow: hidden; }
+  .an-bar-fill{ height: 100%; border-radius: 4px; min-width: 3px; }
+  .an-bar-row .val{ text-align: right; color: var(--ivory-dim); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  .an-list-row{ display:flex; justify-content: space-between; align-items:center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--hairline); font-size: 15px; }
+  .an-list-row:last-child{ border-bottom: none; }
+  .an-list-row .who b{ color: var(--ivory); }
+  .an-list-row .meta{ color: var(--ivory-dim); font-size: 13px; }
+  .an-empty{ color: var(--ivory-dim); font-size: 14.5px; padding: 6px 0; }
 </style>
 </head>
 <body>
@@ -188,53 +225,83 @@
 
   <div class="dash" id="dash"></div>
 
-  <div class="toolbar">
-    <div class="grow"><input type="text" id="search" placeholder="Rechercher un lieu, un email, une note…"></div>
-    <select id="sort">
-      <option value="date-desc">Plus récent d'abord</option>
-      <option value="date-asc">Plus ancien d'abord</option>
-      <option value="alpha">Alphabétique</option>
-    </select>
-    <button id="btn-import" class="gold">Coller Mailsuite</button>
-    <button id="btn-add" class="primary">+ Nouveau contact</button>
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="prospects">Prospects</button>
+    <button class="tab-btn" data-tab="analytics">Analytics</button>
   </div>
 
-  <div class="toolbar" style="margin-top:-10px;">
-    <div class="chips" id="status-chips"></div>
-  </div>
+  <div id="view-prospects">
 
-  <div class="panel" id="import-panel" hidden>
-    <h2>Import Mailsuite</h2>
-    <p class="hint">Collez ici le texte brut de l'onglet « Activité récente » de Mailsuite. Le CRM détecte les emails, compte les ouvertures et calcule la date, sans rien écraser du reste de la fiche.</p>
-    <textarea id="mailsuite-input" placeholder="lereperedemerlin77@gmail.com a ouvert votre e-mail (6e fois)Proposition d'animation événementielle&#10;il y a 25 minutes"></textarea>
-    <div class="panel-actions" style="margin-top:12px;">
-      <button id="btn-parse" class="gold">Analyser le texte</button>
+    <div class="toolbar">
+      <div class="grow"><input type="text" id="search" placeholder="Rechercher un lieu, un email, une note…"></div>
+      <select id="sort">
+        <option value="date-desc">Plus récent d'abord</option>
+        <option value="date-asc">Plus ancien d'abord</option>
+        <option value="alpha">Alphabétique</option>
+      </select>
+      <button id="btn-import" class="gold">Coller Mailsuite</button>
+      <button id="btn-add" class="primary">+ Nouveau contact</button>
     </div>
-    <div class="import-preview" id="import-preview" hidden></div>
+
+    <div class="toolbar" style="margin-top:-10px;">
+      <div class="chips" id="status-chips"></div>
+    </div>
+
+    <div class="panel" id="import-panel" hidden>
+      <h2>Import Mailsuite</h2>
+      <p class="hint">Collez ici le texte brut de l'onglet « Activité récente » de Mailsuite. Le CRM détecte les emails, compte les ouvertures et calcule la date, sans rien écraser du reste de la fiche.</p>
+      <textarea id="mailsuite-input" placeholder="lereperedemerlin77@gmail.com a ouvert votre e-mail (6e fois)Proposition d'animation événementielle&#10;il y a 25 minutes"></textarea>
+      <div class="panel-actions" style="margin-top:12px;">
+        <button id="btn-parse" class="gold">Analyser le texte</button>
+      </div>
+      <div class="import-preview" id="import-preview" hidden></div>
+    </div>
+
+    <div class="panel" id="add-panel" hidden>
+      <h2>Nouveau contact</h2>
+      <div class="field-grid">
+        <div class="field"><label>Lieu</label><input type="text" id="f-venue" placeholder="Nom du lieu"></div>
+        <div class="field"><label>Email</label><input type="email" id="f-email" placeholder="contact@lieu.fr"></div>
+        <div class="field"><label>Segment</label><input type="text" id="f-segment" placeholder="Restaurant médiéval…" list="segment-options"></div>
+        <div class="field"><label>Date de contact</label><input type="date" id="f-date"></div>
+        <div class="field"><label>Statut</label><select id="f-status"></select></div>
+        <div class="field"><label>Note</label><input type="text" id="f-note" placeholder="Optionnel"></div>
+      </div>
+      <datalist id="segment-options"></datalist>
+      <div class="panel-actions">
+        <button id="btn-cancel-add" class="ghost" style="text-transform:uppercase;">Annuler</button>
+        <button id="btn-save-add" class="primary">Enregistrer</button>
+      </div>
+    </div>
+
+    <div class="list-head">
+      <h2 style="font-size:19px;">Prospects</h2>
+      <span class="count" id="list-count"></span>
+    </div>
+    <div class="cards" id="cards"></div>
+
   </div>
 
-  <div class="panel" id="add-panel" hidden>
-    <h2>Nouveau contact</h2>
-    <div class="field-grid">
-      <div class="field"><label>Lieu</label><input type="text" id="f-venue" placeholder="Nom du lieu"></div>
-      <div class="field"><label>Email</label><input type="email" id="f-email" placeholder="contact@lieu.fr"></div>
-      <div class="field"><label>Segment</label><input type="text" id="f-segment" placeholder="Restaurant médiéval…" list="segment-options"></div>
-      <div class="field"><label>Date de contact</label><input type="date" id="f-date"></div>
-      <div class="field"><label>Statut</label><select id="f-status"></select></div>
-      <div class="field"><label>Note</label><input type="text" id="f-note" placeholder="Optionnel"></div>
+  <div id="view-analytics" hidden>
+    <div class="kpi-row" id="an-kpis"></div>
+    <div class="panel an-section">
+      <h2>Répartition par statut</h2>
+      <div id="an-status-bars"></div>
     </div>
-    <datalist id="segment-options"></datalist>
-    <div class="panel-actions">
-      <button id="btn-cancel-add" class="ghost" style="text-transform:uppercase;">Annuler</button>
-      <button id="btn-save-add" class="primary">Enregistrer</button>
+    <div class="panel an-section">
+      <h2>Répartition par segment</h2>
+      <div id="an-segment-bars"></div>
+    </div>
+    <div class="panel an-section">
+      <h2>Contacts les plus engagés</h2>
+      <div id="an-top-engaged"></div>
+    </div>
+    <div class="panel an-section">
+      <h2>À relancer maintenant</h2>
+      <p class="hint">Relance due à 7 jours ouvrés sans engagement depuis le premier contact, ou 5 jours ouvrés après une ouverture/clic resté sans réponse.</p>
+      <div id="an-relance-list"></div>
     </div>
   </div>
-
-  <div class="list-head">
-    <h2 style="font-size:19px;">Prospects</h2>
-    <span class="count" id="list-count"></span>
-  </div>
-  <div class="cards" id="cards"></div>
 
   <footer class="page-footer">Kleiomné · outil interne — données privées, non partagées.</footer>
 </div>
@@ -268,7 +335,8 @@
   var els = {};
   ["dash","search","sort","status-chips","btn-import","btn-add","import-panel","mailsuite-input",
    "btn-parse","import-preview","add-panel","f-venue","f-email","f-segment","f-date","f-status","f-note",
-   "segment-options","btn-cancel-add","btn-save-add","cards","list-count","sync-dot","sync-text"
+   "segment-options","btn-cancel-add","btn-save-add","cards","list-count","sync-dot","sync-text",
+   "view-prospects","view-analytics","an-kpis","an-status-bars","an-segment-bars","an-top-engaged","an-relance-list"
   ].forEach(function(id){ els[id.replace(/-([a-z])/g, function(_,c){return c.toUpperCase();})] = document.getElementById(id); });
 
   var state = {
@@ -276,8 +344,39 @@
     activeStatuses: new Set(),
     search: "",
     sort: "date-desc",
-    parsedImport: null
+    parsedImport: null,
+    filterRelanceDue: false,
+    tab: "prospects"
   };
+
+  // ---------- relance due (7 jours ouvrés sans engagement, 5 après ouverture/clic) ----------
+  function businessDaysSince(iso){
+    if(!iso) return 0;
+    var start = new Date(iso);
+    if(isNaN(start)) return 0;
+    start.setHours(0,0,0,0);
+    var end = new Date();
+    end.setHours(0,0,0,0);
+    if(start >= end) return 0;
+    var count = 0;
+    var d = new Date(start);
+    while(d < end){
+      d.setDate(d.getDate()+1);
+      var day = d.getDay();
+      if(day !== 0 && day !== 6) count++;
+    }
+    return count;
+  }
+
+  function relanceInfo(c){
+    if(c.status === "Répondu") return { due:false, days:0, threshold:0 };
+    var ref = c.date || c.createdAt;
+    if(c.lastRelanceDate && c.lastRelanceDate > ref) ref = c.lastRelanceDate;
+    if(c.opensLast && c.opensLast > ref) ref = c.opensLast;
+    var threshold = (c.opensCount > 0) ? 5 : 7;
+    var days = businessDaysSince(ref);
+    return { due: days >= threshold, days: days, threshold: threshold };
+  }
 
   // ---------- storage adapter: db capability, falling back to localStorage ----------
   var store = { mode: "connecting", db: null };
@@ -402,17 +501,25 @@
     var counts = {};
     STATUSES.forEach(function(s){ counts[s.key] = 0; });
     state.contacts.forEach(function(c){ if(counts[c.status] === undefined) counts[c.status]=0; counts[c.status]++; });
-    els.dash.innerHTML = STATUSES.map(function(s){
+    var relanceDueCount = state.contacts.filter(function(c){ return relanceInfo(c).due; }).length;
+    var relanceTile = '<div class="tile relance'+(state.filterRelanceDue?" active":"")+'" data-relance="1">' +
+      '<div class="n">'+relanceDueCount+'</div><div class="t">Relance due</div></div>';
+    els.dash.innerHTML = relanceTile + STATUSES.map(function(s){
       var active = state.activeStatuses.has(s.key) ? " active" : "";
       return '<div class="tile'+active+'" style="--tile-color:'+s.color+'" data-status="'+esc(s.key)+'">' +
         '<div class="n">'+counts[s.key]+'</div><div class="t">'+esc(s.key)+'</div></div>';
     }).join("");
-    Array.prototype.forEach.call(els.dash.querySelectorAll(".tile"), function(t){
+    Array.prototype.forEach.call(els.dash.querySelectorAll(".tile[data-status]"), function(t){
       t.addEventListener("click", function(){
         var st = t.getAttribute("data-status");
         if(state.activeStatuses.has(st)) state.activeStatuses.delete(st); else state.activeStatuses.add(st);
         renderAll();
       });
+    });
+    var rt = els.dash.querySelector(".tile[data-relance]");
+    if(rt) rt.addEventListener("click", function(){
+      state.filterRelanceDue = !state.filterRelanceDue;
+      renderAll();
     });
   }
 
@@ -440,6 +547,7 @@
     var q = state.search.trim().toLowerCase();
     var list = state.contacts.filter(function(c){
       if(state.activeStatuses.size && !state.activeStatuses.has(c.status)) return false;
+      if(state.filterRelanceDue && !relanceInfo(c).due) return false;
       if(!q) return true;
       return [c.venue,c.email,c.segment,c.note].join(" ").toLowerCase().indexOf(q) !== -1;
     });
@@ -472,11 +580,13 @@
       '<div class="opens-count">'+c.opensCount+' ouverture'+(c.opensCount>1?'s':'')+'</div>' +
       '<div class="opens-last">dernière '+fmtDate(c.opensLast)+' · '+relLabel(c.opensLast)+'</div>'
     ) : '<div class="opens-val" style="color:var(--ivory-dim);">—</div>';
+    var ri = relanceInfo(c);
+    var badge = ri.due ? '<div class="relance-badge">⏰ Relance due · '+ri.days+'j ouvrés</div>' : '';
     return (
       '<div class="card" data-id="'+esc(c.id)+'" style="--card-color:'+color+'">'+
         '<div><div class="venue">'+esc(c.venue||"(sans nom)")+'</div>'+
           '<div class="email">'+esc(c.email||"")+'</div>'+
-          '<div class="segment">'+esc(c.segment||"")+'</div></div>'+
+          '<div class="segment">'+esc(c.segment||"")+'</div>'+badge+'</div>'+
         '<div class="field-mini"><label>Contact</label><div class="date-val">'+fmtDate(c.date)+'</div></div>'+
         '<div class="field-mini"><label>Statut</label>'+
           '<select class="status-select" data-field="status" style="border-color:'+color+'">'+statusOptions+'</select></div>'+
@@ -491,7 +601,9 @@
     var id = cardEl.getAttribute("data-id");
     var statusSel = cardEl.querySelector('[data-field="status"]');
     statusSel.addEventListener("change", function(){
-      updateContact(id, { status: statusSel.value });
+      var patch = { status: statusSel.value };
+      if(statusSel.value === "Relancé") patch.lastRelanceDate = new Date().toISOString();
+      updateContact(id, patch);
     });
     var noteArea = cardEl.querySelector('[data-field="note"]');
     var noteSave = function(){ updateContact(id, { note: noteArea.value }); };
@@ -509,8 +621,73 @@
     renderDashboard();
     renderChips();
     renderList();
+    renderAnalytics();
     var segments = Array.from(new Set(state.contacts.map(function(c){ return c.segment; }).filter(Boolean)));
     els.segmentOptions.innerHTML = segments.map(function(s){ return '<option value="'+esc(s)+'">'; }).join("");
+  }
+
+  // ---------- tabs ----------
+  Array.prototype.forEach.call(document.querySelectorAll(".tab-btn"), function(btn){
+    btn.addEventListener("click", function(){
+      state.tab = btn.getAttribute("data-tab");
+      Array.prototype.forEach.call(document.querySelectorAll(".tab-btn"), function(b){ b.classList.toggle("active", b===btn); });
+      els.viewProspects.hidden = state.tab !== "prospects";
+      els.viewAnalytics.hidden = state.tab !== "analytics";
+    });
+  });
+
+  // ---------- analytics ----------
+  function barRow(label, count, pctTotal, widthDenom, color){
+    var pct = pctTotal ? Math.round((count/pctTotal)*100) : 0;
+    var widthPct = widthDenom ? Math.max((count/widthDenom)*100, count>0?2:0) : 0;
+    return '<div class="an-bar-row"><div class="lbl" title="'+esc(label)+'">'+esc(label)+'</div>' +
+      '<div class="an-bar-track"><div class="an-bar-fill" style="width:'+widthPct+'%;background:'+color+';"></div></div>' +
+      '<div class="val">'+count+' · '+pct+'%</div></div>';
+  }
+
+  function renderAnalytics(){
+    var total = state.contacts.length;
+    var repondu = state.contacts.filter(function(c){ return c.status === "Répondu"; }).length;
+    var engaged = state.contacts.filter(function(c){ return (c.opensCount||0) > 0; }).length;
+    var relanceDue = state.contacts.filter(function(c){ return relanceInfo(c).due; }).length;
+    var totalOpens = state.contacts.reduce(function(s,c){ return s + (c.opensCount||0); }, 0);
+
+    els.anKpis.innerHTML = [
+      { v: total ? Math.round((engaged/total)*100)+"%" : "—", l: "Taux d'ouverture" },
+      { v: total ? Math.round((repondu/total)*100)+"%" : "—", l: "Taux de réponse" },
+      { v: String(relanceDue), l: "Relances dues" },
+      { v: String(totalOpens), l: "Ouvertures cumulées" }
+    ].map(function(k){ return '<div class="kpi-card"><div class="v">'+k.v+'</div><div class="l">'+k.l+'</div></div>'; }).join("");
+
+    var statusCounts = {};
+    STATUSES.forEach(function(s){ statusCounts[s.key] = 0; });
+    state.contacts.forEach(function(c){ if(statusCounts[c.status] !== undefined) statusCounts[c.status]++; });
+    els.anStatusBars.innerHTML = total ? STATUSES.map(function(s){
+      return barRow(s.key, statusCounts[s.key], total, total, s.color);
+    }).join("") : '<div class="an-empty">Aucun contact pour le moment.</div>';
+
+    var bySegment = {};
+    state.contacts.forEach(function(c){ var seg = c.segment || "(non renseigné)"; bySegment[seg] = (bySegment[seg]||0)+1; });
+    var segKeys = Object.keys(bySegment).sort(function(a,b){ return bySegment[b]-bySegment[a]; });
+    var maxSeg = segKeys.length ? bySegment[segKeys[0]] : 0;
+    els.anSegmentBars.innerHTML = segKeys.length ? segKeys.map(function(seg){
+      return barRow(seg, bySegment[seg], total, maxSeg, "var(--gold)");
+    }).join("") : '<div class="an-empty">Aucun segment renseigné.</div>';
+
+    var topEngaged = state.contacts.filter(function(c){ return (c.opensCount||0) > 0; })
+      .sort(function(a,b){ return (b.opensCount||0)-(a.opensCount||0); }).slice(0,5);
+    els.anTopEngaged.innerHTML = topEngaged.length ? topEngaged.map(function(c){
+      return '<div class="an-list-row"><span class="who"><b>'+esc(c.venue||c.email)+'</b> — '+esc(c.status)+'</span>' +
+        '<span class="meta">'+c.opensCount+' ouverture'+(c.opensCount>1?'s':'')+' · dernière '+fmtDate(c.opensLast)+'</span></div>';
+    }).join("") : '<div class="an-empty">Aucune ouverture enregistrée pour le moment.</div>';
+
+    var dueList = state.contacts.filter(function(c){ return relanceInfo(c).due; })
+      .sort(function(a,b){ return relanceInfo(b).days - relanceInfo(a).days; });
+    els.anRelanceList.innerHTML = dueList.length ? dueList.map(function(c){
+      var ri = relanceInfo(c);
+      return '<div class="an-list-row"><span class="who"><b>'+esc(c.venue||c.email)+'</b> — '+esc(c.status)+'</span>' +
+        '<span class="meta">'+ri.days+'j ouvrés (seuil '+ri.threshold+'j'+((c.opensCount>0)?', intérêt manifesté':'')+')</span></div>';
+    }).join("") : '<div class="an-empty">Aucune relance due pour le moment.</div>';
   }
 
   // ---------- add contact panel ----------
