@@ -252,6 +252,7 @@
   .analysis-meta{ margin-top: 8px; font-size: 12px; color: var(--ivory-dim); }
   .analysis-empty{ color: var(--ivory-dim); font-size: 14.5px; }
   #export-text{ min-height: 340px; font-family: "Cormorant Garamond", serif; font-size: 14.5px; white-space: pre; }
+  #relance-draft-text{ min-height: 260px; font-size: 15.5px; white-space: pre-wrap; }
 </style>
 </head>
 <body>
@@ -367,6 +368,13 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="relance-overlay" hidden>
+  <div class="modal" id="relance-modal" role="dialog" aria-modal="true">
+    <button class="modal-close" id="relance-close" aria-label="Fermer">✕ Fermer</button>
+    <div id="relance-body"></div>
+  </div>
+</div>
+
 <script>
 (function(){
   "use strict";
@@ -414,7 +422,8 @@
    "segment-options","btn-cancel-add","btn-save-add","cards","list-count","sync-dot","sync-text",
    "view-prospects","view-analytics","an-kpis","an-status-bars","an-segment-bars","an-top-engaged","an-relance-list","an-arg-bars",
    "detail-overlay","detail-modal","detail-body","detail-close",
-   "export-overlay","export-modal","export-body","export-close","btn-export"
+   "export-overlay","export-modal","export-body","export-close","btn-export",
+   "relance-overlay","relance-modal","relance-body","relance-close"
   ].forEach(function(id){ els[id.replace(/-([a-z])/g, function(_,c){return c.toUpperCase();})] = document.getElementById(id); });
 
   var state = {
@@ -426,8 +435,40 @@
     filterRelanceDue: false,
     tab: "prospects",
     openDetailId: null,
-    analyzing: null
+    analyzing: null,
+    openRelanceId: null,
+    relanceGenerating: null
   };
+
+  function computeArgTagStats(){
+    var tagStats = {};
+    ARG_TAGS.forEach(function(t){ tagStats[t.key] = { sent: 0, engaged: 0 }; });
+    state.contacts.forEach(function(c){
+      (c.argTags||[]).forEach(function(k){
+        if(!tagStats[k]) return;
+        tagStats[k].sent++;
+        if((c.opensCount||0) > 0) tagStats[k].engaged++;
+      });
+    });
+    return ARG_TAGS.filter(function(t){ return tagStats[t.key].sent > 0; }).map(function(t){
+      var s = tagStats[t.key];
+      return { key: t.key, label: t.label, sent: s.sent, engaged: s.engaged, rate: Math.round((s.engaged/s.sent)*100) };
+    }).sort(function(a,b){ return b.rate - a.rate || b.sent - a.sent; });
+  }
+
+  function tryCopyText(text, statusEl, taEl){
+    var fallback = function(){
+      if(taEl){ taEl.focus(); taEl.select(); }
+      statusEl.textContent = "Copie automatique indisponible ici — texte sélectionné, utilisez Cmd/Ctrl+C.";
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){
+        statusEl.textContent = "Copié — prêt à coller.";
+      }).catch(fallback);
+    } else {
+      fallback();
+    }
+  }
 
   var capSample; // undefined = still resolving, null = unavailable, function = ready
   var capDownloads; // same tri-state
@@ -691,7 +732,7 @@
           '<select class="status-select" data-field="status" style="border-color:'+color+'">'+statusOptions+'</select></div>'+
         '<div class="field-mini"><label>Ouvertures</label>'+opens+'</div>'+
         '<div class="field-mini"><label>Note</label><textarea class="note-area" data-field="note" placeholder="—">'+esc(c.note||"")+'</textarea></div>'+
-        '<div class="card-actions"><button class="ghost" data-action="delete">Supprimer</button></div>'+
+        '<div class="card-actions"><button class="gold" data-action="relance">Générer une relance</button><button class="ghost" data-action="delete">Supprimer</button></div>'+
       '</div>'
     );
   }
@@ -708,6 +749,10 @@
     var noteSave = function(){ updateContact(id, { note: noteArea.value }); };
     noteArea.addEventListener("blur", noteSave);
     noteArea.addEventListener("keydown", function(e){ if(e.key === "Enter" && (e.metaKey||e.ctrlKey)) { noteArea.blur(); } });
+    cardEl.querySelector('[data-action="relance"]').addEventListener("click", function(e){
+      e.stopPropagation();
+      openRelanceDraft(id);
+    });
     cardEl.querySelector('[data-action="delete"]').addEventListener("click", function(e){
       e.stopPropagation();
       var c = state.contacts.find(function(x){ return x.id === id; });
@@ -729,6 +774,10 @@
     if(state.openDetailId && state.analyzing !== state.openDetailId){
       var stillExists = state.contacts.some(function(c){ return c.id === state.openDetailId; });
       if(stillExists) renderDetailModal(); else closeDetail();
+    }
+    if(state.openRelanceId && state.relanceGenerating !== state.openRelanceId){
+      var relStillExists = state.contacts.some(function(c){ return c.id === state.openRelanceId; });
+      if(relStillExists) renderRelanceModal(); else closeRelanceDraft();
     }
   }
 
@@ -877,6 +926,135 @@
     });
   }
 
+  // ---------- relance draft (per prospect, informed by analytics) ----------
+  function openRelanceDraft(id){
+    state.openRelanceId = id;
+    renderRelanceModal();
+    els.relanceOverlay.hidden = false;
+  }
+  function closeRelanceDraft(){
+    state.openRelanceId = null;
+    state.relanceGenerating = null;
+    els.relanceOverlay.hidden = true;
+    els.relanceBody.innerHTML = "";
+  }
+  els.relanceClose.addEventListener("click", closeRelanceDraft);
+  els.relanceOverlay.addEventListener("click", function(e){ if(e.target === els.relanceOverlay) closeRelanceDraft(); });
+  document.addEventListener("keydown", function(e){ if(e.key === "Escape" && !els.relanceOverlay.hidden) closeRelanceDraft(); });
+
+  function renderRelanceModal(){
+    var c = state.contacts.find(function(x){ return x.id === state.openRelanceId; });
+    if(!c) return;
+    var topTags = computeArgTagStats().filter(function(r){ return r.sent >= 2; }).slice(0,3);
+    var tagsHint = topTags.length
+      ? ('D\'après les données actuelles, les arguments les plus engageants sont : ' + topTags.map(function(r){ return r.label + ' (' + r.rate + '%)'; }).join(', ') + '.')
+      : 'Pas encore assez de données taguées pour dégager un argument gagnant clair — le brouillon s\'appuiera surtout sur la fiche de ce prospect.';
+
+    var bodyHTML;
+    if(state.relanceGenerating === c.id){
+      bodyHTML = '<div class="analysis-status" id="relance-status">Génération en cours…</div><textarea id="relance-draft-text" readonly></textarea>';
+    } else if(c.draftRelance){
+      bodyHTML =
+        '<textarea id="relance-draft-text">'+esc(c.draftRelance)+'</textarea>'+
+        '<div class="analysis-meta">Générée '+relLabel(c.draftRelanceAt)+'</div>'+
+        '<div class="panel-actions" style="margin-top:12px; justify-content:flex-start; gap:10px;">'+
+          '<button class="primary" id="btn-relance-copy">Copier le texte</button>'+
+          '<button class="gold" id="btn-relance-regen">Régénérer</button>'+
+        '</div>'+
+        '<div class="analysis-status" id="relance-status" style="margin-top:8px;"></div>';
+    } else {
+      bodyHTML =
+        '<div class="analysis-empty">Pas encore de brouillon pour ce prospect.</div>'+
+        '<div class="panel-actions" style="margin-top:12px; justify-content:flex-start;"><button class="gold" id="btn-relance-gen">Générer la relance</button></div>'+
+        '<div class="analysis-status" id="relance-status" style="margin-top:8px;"></div>';
+    }
+
+    els.relanceBody.innerHTML =
+      '<h2>Relance — '+esc(c.venue||c.email||"")+'</h2>'+
+      '<p class="hint">Brouillon basé sur la fiche du prospect, les emails déjà envoyés, et les arguments qui engagent le plus dans le portefeuille actuel. '+esc(tagsHint)+'</p>'+
+      bodyHTML;
+
+    var genBtn = document.getElementById("btn-relance-gen");
+    if(genBtn) genBtn.addEventListener("click", function(){ generateRelanceDraft(c.id, false); });
+    var regenBtn = document.getElementById("btn-relance-regen");
+    if(regenBtn) regenBtn.addEventListener("click", function(){ generateRelanceDraft(c.id, true); });
+    var copyBtn = document.getElementById("btn-relance-copy");
+    if(copyBtn) copyBtn.addEventListener("click", function(){
+      var ta = document.getElementById("relance-draft-text");
+      tryCopyText(ta.value, document.getElementById("relance-status"), ta);
+    });
+    var draftTa = document.getElementById("relance-draft-text");
+    if(draftTa && !draftTa.readOnly){
+      draftTa.addEventListener("blur", function(){ updateContact(c.id, { draftRelance: draftTa.value }); });
+    }
+  }
+
+  function buildRelancePrompt(c){
+    var ri = relanceInfo(c);
+    var topTags = computeArgTagStats().filter(function(r){ return r.sent >= 2; }).slice(0,3);
+    var lines = [];
+    lines.push("Tu rédiges un email de relance pour Solenne, fondatrice de Kleiomné, une agence B2B qui conçoit des expériences narratives immersives (visites théâtralisées, murder parties, dîners immersifs, bals à thème) pour des lieux à forte identité patrimoniale ou thématique.");
+    lines.push("Ton habituel de Solenne : précis et posé, jamais guindé ni pressant, phrases courtes, personnalisation concrète au lieu, proposition claire, pas de jargon marketing ni de formules creuses.");
+    lines.push("");
+    lines.push("Fiche du prospect à relancer :");
+    lines.push("- Lieu : " + (c.venue || "(nom non renseigné)"));
+    lines.push("- Segment : " + (c.segment || "non renseigné"));
+    lines.push("- Statut actuel : " + c.status);
+    lines.push("- Date du premier contact : " + fmtDate(c.date));
+    lines.push("- Ouvertures Mailsuite : " + (c.opensCount ? (c.opensCount + ", dernière " + fmtDate(c.opensLast)) : "aucune"));
+    lines.push("- Jours ouvrés écoulés depuis le dernier point de contact : " + ri.days + " (seuil de relance : " + ri.threshold + "j)");
+    if(c.note) lines.push("- Note existante : " + c.note);
+    if(c.emailsText){
+      lines.push("");
+      lines.push("Email(s) déjà envoyé(s) à ce prospect — ne pas répéter ce contenu, s'appuyer dessus et apporter un élément nouveau :");
+      lines.push(c.emailsText.slice(0, 4000));
+    }
+    lines.push("");
+    if(topTags.length){
+      lines.push("D'après les données d'engagement observées sur l'ensemble des prospects de Solenne à ce jour, ces arguments génèrent le plus d'ouvertures (à privilégier s'ils sont pertinents pour ce lieu précis, sans forcer sinon) :");
+      topTags.forEach(function(r){ lines.push("- " + r.label + " (" + r.rate + "% d'ouverture sur " + r.sent + " envois taggés)"); });
+      lines.push("");
+    }
+    lines.push("Rédige une relance courte (objet + corps d'environ 120 à 180 mots), en français, dans le ton habituel de Solenne, cohérente avec le(s) mail(s) déjà envoyé(s). Réponds uniquement sous cette forme, sans rien avant ni après :");
+    lines.push("Objet : ...");
+    lines.push("");
+    lines.push("[corps de l'email]");
+    return lines.join("\n");
+  }
+
+  function generateRelanceDraft(id, forceRefresh){
+    if(typeof capSample !== "function"){
+      var target = document.getElementById("relance-status") || document.getElementById("btn-relance-gen");
+      var msg = capSample === undefined
+        ? "Vérification de la disponibilité de la génération… réessayez dans un instant."
+        : "Génération indisponible dans cette vue (ouvrez l'outil publié depuis Claude pour l'utiliser).";
+      if(target) target.outerHTML = '<div class="analysis-status">'+esc(msg)+'</div>';
+      return;
+    }
+    state.relanceGenerating = id;
+    renderRelanceModal();
+    var textEl = document.getElementById("relance-draft-text");
+    var statusEl = document.getElementById("relance-status");
+    var c = state.contacts.find(function(x){ return x.id === id; });
+    capSample(buildRelancePrompt(c), {
+      modelTier: "default",
+      cache: forceRefresh ? false : true,
+      onText: function(u){
+        if(statusEl) statusEl.textContent = "";
+        if(textEl) textEl.value = u.text;
+      }
+    }).then(function(res){
+      state.relanceGenerating = null;
+      updateContact(id, { draftRelance: res.text, draftRelanceAt: new Date().toISOString() });
+    }).catch(function(e){
+      state.relanceGenerating = null;
+      renderRelanceModal();
+      var statusEl2 = document.getElementById("relance-status");
+      if(statusEl2) statusEl2.textContent = ANALYSIS_ERROR_MSG[e && e.code] || "Une erreur est survenue — réessayez.";
+      if(e && e.text){ var ta2 = document.getElementById("relance-draft-text"); if(ta2) ta2.value = e.text; }
+    });
+  }
+
   // ---------- export for chat ----------
   function buildExportText(){
     var now = new Date();
@@ -932,17 +1110,7 @@
     var statusEl = document.getElementById("export-copy-status");
 
     document.getElementById("btn-export-copy").addEventListener("click", function(){
-      if(navigator.clipboard && navigator.clipboard.writeText){
-        navigator.clipboard.writeText(text).then(function(){
-          statusEl.textContent = "Copié — prêt à coller dans le chat.";
-        }).catch(function(){
-          ta.focus(); ta.select();
-          statusEl.textContent = "Copie automatique indisponible ici — texte sélectionné, utilisez Cmd/Ctrl+C.";
-        });
-      } else {
-        ta.focus(); ta.select();
-        statusEl.textContent = "Copie automatique indisponible ici — texte sélectionné, utilisez Cmd/Ctrl+C.";
-      }
+      tryCopyText(text, statusEl, ta);
     });
 
     var dlBtn = document.getElementById("btn-export-download");
@@ -1021,19 +1189,7 @@
         '<span class="meta">'+c.opensCount+' ouverture'+(c.opensCount>1?'s':'')+' · dernière '+fmtDate(c.opensLast)+'</span></div>';
     }).join("") : '<div class="an-empty">Aucune ouverture enregistrée pour le moment.</div>';
 
-    var tagStats = {};
-    ARG_TAGS.forEach(function(t){ tagStats[t.key] = { sent: 0, engaged: 0 }; });
-    state.contacts.forEach(function(c){
-      (c.argTags||[]).forEach(function(k){
-        if(!tagStats[k]) return;
-        tagStats[k].sent++;
-        if((c.opensCount||0) > 0) tagStats[k].engaged++;
-      });
-    });
-    var tagRows = ARG_TAGS.filter(function(t){ return tagStats[t.key].sent > 0; }).map(function(t){
-      var s = tagStats[t.key];
-      return { label: t.label, sent: s.sent, engaged: s.engaged, rate: Math.round((s.engaged/s.sent)*100) };
-    }).sort(function(a,b){ return b.rate - a.rate || b.sent - a.sent; });
+    var tagRows = computeArgTagStats();
     els.anArgBars.innerHTML = tagRows.length ? tagRows.map(function(r){
       return '<div class="an-bar-row"><div class="lbl" title="'+esc(r.label)+'">'+esc(r.label)+'</div>'+
         '<div class="an-bar-track"><div class="an-bar-fill" style="width:'+Math.max(r.rate, 2)+'%;background:var(--gold);"></div></div>'+
