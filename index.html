@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kleiomné — Suivi des prospects</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Cormorant+SC:wght@500;600&display=swap">
+<style>
+  :root{
+    --navy: #211f38;
+    --navy-2: #2b2850;
+    --navy-3: #34305f;
+    --ivory: #FDF6E4;
+    --ivory-dim: #cfc7ad;
+    --gold: #C9A84C;
+    --gold-soft: #e3cd8e;
+    --terracotta: #C06840;
+    --hairline: rgba(253,246,228,0.14);
+    --hairline-strong: rgba(253,246,228,0.26);
+    --st-envoye: #9aa3c9;
+    --st-ouvert: #C9A84C;
+    --st-relance: #C06840;
+    --st-repondu: #8FAE8B;
+    --st-sansreponse: #A86767;
+    --st-identifier: #9C8FBF;
+    --shadow: 0 18px 40px -20px rgba(0,0,0,0.55);
+    --radius: 10px;
+  }
+
+  *{ box-sizing: border-box; }
+  html{ color-scheme: dark; }
+  body{
+    margin:0;
+    background: var(--navy);
+    color: var(--ivory);
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 17px;
+    line-height: 1.5;
+    padding: 0 20px 64px;
+  }
+  a{ color: var(--gold); }
+  h1,h2,h3{ font-family: "Cinzel", Georgia, serif; font-weight: 600; margin: 0; text-wrap: balance; }
+  .label{ font-family:"Cormorant SC", "Cormorant Garamond", serif; text-transform: uppercase; letter-spacing: 0.11em; font-weight: 600; }
+
+  .wrap{ max-width: 1120px; margin: 0 auto; }
+
+  /* header */
+  header{ padding: 48px 0 30px; border-bottom: 1px solid var(--hairline); margin-bottom: 28px; }
+  .eyebrow{ color: var(--gold); font-size: 13px; margin-bottom: 10px; }
+  header h1{ font-size: clamp(28px, 4vw, 40px); color: var(--ivory); }
+  header p.sub{ margin-top: 10px; color: var(--ivory-dim); font-style: italic; font-size: 18px; max-width: 62ch; }
+  .sync-note{ margin-top: 14px; font-size: 13px; color: var(--ivory-dim); display:flex; align-items:center; gap:8px; }
+  .sync-dot{ width:7px; height:7px; border-radius:50%; background: var(--gold); flex:none; }
+  .sync-dot.local{ background: var(--st-sansreponse); }
+
+  /* dashboard */
+  .dash{ display:grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 32px; }
+  @media (max-width: 900px){ .dash{ grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 520px){ .dash{ grid-template-columns: repeat(2, 1fr); } }
+  .tile{
+    background: var(--navy-2);
+    border: 1px solid var(--hairline);
+    border-top: 2px solid var(--tile-color, var(--gold));
+    border-radius: var(--radius);
+    padding: 16px 14px;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .tile:hover{ background: var(--navy-3); }
+  .tile.active{ border-color: var(--hairline-strong); background: var(--navy-3); box-shadow: var(--shadow); }
+  .tile .n{ font-family:"Cinzel", serif; font-size: 28px; color: var(--tile-color, var(--gold)); line-height: 1; }
+  .tile .t{ margin-top: 8px; font-size: 12.5px; color: var(--ivory-dim); }
+
+  /* toolbar */
+  .toolbar{ display:flex; flex-wrap: wrap; align-items:center; gap: 10px; margin-bottom: 20px; }
+  .toolbar .grow{ flex: 1 1 220px; }
+  input[type=text], input[type=email], input[type=date], select, textarea{
+    background: var(--navy-2);
+    border: 1px solid var(--hairline-strong);
+    color: var(--ivory);
+    font-family: "Cormorant Garamond", serif;
+    font-size: 16px;
+    border-radius: 7px;
+    padding: 9px 12px;
+    width: 100%;
+  }
+  select{ appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--gold) 50%), linear-gradient(135deg, var(--gold) 50%, transparent 50%); background-position: calc(100% - 16px) center, calc(100% - 11px) center; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 30px; }
+  input:focus, select:focus, textarea:focus, button:focus-visible{ outline: 2px solid var(--gold); outline-offset: 1px; }
+  ::placeholder{ color: var(--ivory-dim); opacity: .7; }
+
+  button{
+    font-family: "Cormorant SC", serif;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 7px;
+    padding: 10px 16px;
+    border: 1px solid var(--hairline-strong);
+    background: transparent;
+    color: var(--ivory);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  button:hover{ border-color: var(--gold); color: var(--gold); }
+  button.primary{ background: var(--terracotta); border-color: var(--terracotta); color: var(--ivory); }
+  button.primary:hover{ background: #a8582f; border-color: #a8582f; color: var(--ivory); }
+  button.gold{ background: var(--gold); border-color: var(--gold); color: var(--navy); }
+  button.gold:hover{ background: var(--gold-soft); border-color: var(--gold-soft); color: var(--navy); }
+  button.ghost{ border-color: transparent; color: var(--ivory-dim); padding: 6px 8px; font-size: 12px; }
+  button.ghost:hover{ color: var(--terracotta); border-color: transparent; background: rgba(192,104,64,0.12); }
+  button:disabled{ opacity: .4; cursor: not-allowed; }
+  button:disabled:hover{ border-color: var(--hairline-strong); color: var(--ivory); }
+
+  .chips{ display:flex; flex-wrap: wrap; gap: 8px; }
+  .chip{
+    font-family:"Cormorant SC", serif; font-size: 12px; letter-spacing: .07em; text-transform: uppercase;
+    border: 1px solid var(--hairline-strong); border-radius: 999px; padding: 6px 13px; cursor: pointer; color: var(--ivory-dim);
+  }
+  .chip.on{ background: var(--gold); border-color: var(--gold); color: var(--navy); }
+
+  /* panels */
+  .panel{
+    background: var(--navy-2); border: 1px solid var(--hairline-strong); border-radius: var(--radius);
+    padding: 22px; margin-bottom: 22px; box-shadow: var(--shadow);
+  }
+  .panel h2{ font-size: 20px; margin-bottom: 4px; }
+  .panel .hint{ color: var(--ivory-dim); font-size: 14.5px; margin-bottom: 16px; }
+  .field-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 720px){ .field-grid{ grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 480px){ .field-grid{ grid-template-columns: 1fr; } }
+  .field label{ display:block; font-size: 11.5px; color: var(--gold); margin-bottom: 6px; }
+  .panel-actions{ display:flex; gap: 10px; justify-content: flex-end; }
+
+  textarea#mailsuite-input{ min-height: 130px; resize: vertical; font-size: 15px; }
+
+  .import-preview{ margin-top: 16px; border-top: 1px solid var(--hairline); padding-top: 14px; }
+  .import-row{ display:flex; align-items:flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--hairline); font-size: 15px; }
+  .import-row:last-child{ border-bottom: none; }
+  .import-row input[type=checkbox]{ margin-top: 4px; accent-color: var(--gold); width: 16px; height: 16px; flex: none; }
+  .import-row .main{ flex: 1; }
+  .import-row .who{ color: var(--ivory); }
+  .import-row .who b{ color: var(--gold-soft); }
+  .import-row .meta{ color: var(--ivory-dim); font-size: 13px; margin-top: 2px; }
+  .tag-new{ font-family:"Cormorant SC",serif; font-size: 10.5px; letter-spacing:.08em; text-transform:uppercase; background: var(--st-identifier); color: var(--navy); border-radius: 4px; padding: 2px 7px; margin-left: 8px; }
+  .import-empty{ color: var(--ivory-dim); font-size: 14.5px; padding: 8px 0; }
+
+  /* list */
+  .list-head{ display:flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+  .list-head .count{ color: var(--ivory-dim); font-size: 14.5px; }
+  .cards{ display: flex; flex-direction: column; gap: 10px; }
+  .card{
+    background: var(--navy-2); border: 1px solid var(--hairline); border-left: 3px solid var(--card-color, var(--gold));
+    border-radius: var(--radius); padding: 16px 18px; display: grid;
+    grid-template-columns: 1.4fr 1fr 0.9fr 1.1fr 1.3fr auto; gap: 16px; align-items: start;
+  }
+  @media (max-width: 980px){ .card{ grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px){ .card{ grid-template-columns: 1fr; } }
+  .card .venue{ font-family:"Cinzel", serif; font-size: 17px; color: var(--ivory); }
+  .card .email{ font-size: 14px; color: var(--ivory-dim); margin-top: 3px; word-break: break-word; }
+  .card .segment{ font-size: 13px; color: var(--gold-soft); margin-top: 6px; }
+  .card .field-mini label{ display:block; font-size: 10.5px; color: var(--ivory-dim); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; font-family:"Cormorant SC",serif; }
+  .card .date-val{ font-size: 15px; }
+  .status-select{ padding: 7px 26px 7px 10px; font-size: 14px; border-radius: 999px; border-width: 1px; }
+  .status-pill-dot{ width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 7px; background: var(--card-color); }
+  .opens-val{ font-size: 15px; }
+  .opens-count{ color: var(--gold); font-family:"Cinzel", serif; font-size: 16px; }
+  .opens-last{ font-size: 12.5px; color: var(--ivory-dim); margin-top: 2px; }
+  .note-area{ min-height: 46px; font-size: 14.5px; resize: vertical; }
+  .card-actions{ display:flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+  .empty-state{ text-align:center; padding: 60px 20px; color: var(--ivory-dim); }
+  .empty-state b{ color: var(--ivory); }
+
+  footer.page-footer{ margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--hairline); color: var(--ivory-dim); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow label">CRM de prospection</div>
+    <h1>Kleiomné — Suivi des prospects</h1>
+    <p class="sub">Lieux contactés, statut de chaque échange, signaux d'engagement Mailsuite — une vue par jour.</p>
+    <div class="sync-note"><span class="sync-dot" id="sync-dot"></span><span id="sync-text">Connexion…</span></div>
+  </header>
+
+  <div class="dash" id="dash"></div>
+
+  <div class="toolbar">
+    <div class="grow"><input type="text" id="search" placeholder="Rechercher un lieu, un email, une note…"></div>
+    <select id="sort">
+      <option value="date-desc">Plus récent d'abord</option>
+      <option value="date-asc">Plus ancien d'abord</option>
+      <option value="alpha">Alphabétique</option>
+    </select>
+    <button id="btn-import" class="gold">Coller Mailsuite</button>
+    <button id="btn-add" class="primary">+ Nouveau contact</button>
+  </div>
+
+  <div class="toolbar" style="margin-top:-10px;">
+    <div class="chips" id="status-chips"></div>
+  </div>
+
+  <div class="panel" id="import-panel" hidden>
+    <h2>Import Mailsuite</h2>
+    <p class="hint">Collez ici le texte brut de l'onglet « Activité récente » de Mailsuite. Le CRM détecte les emails, compte les ouvertures et calcule la date, sans rien écraser du reste de la fiche.</p>
+    <textarea id="mailsuite-input" placeholder="lereperedemerlin77@gmail.com a ouvert votre e-mail (6e fois)Proposition d'animation événementielle&#10;il y a 25 minutes"></textarea>
+    <div class="panel-actions" style="margin-top:12px;">
+      <button id="btn-parse" class="gold">Analyser le texte</button>
+    </div>
+    <div class="import-preview" id="import-preview" hidden></div>
+  </div>
+
+  <div class="panel" id="add-panel" hidden>
+    <h2>Nouveau contact</h2>
+    <div class="field-grid">
+      <div class="field"><label>Lieu</label><input type="text" id="f-venue" placeholder="Nom du lieu"></div>
+      <div class="field"><label>Email</label><input type="email" id="f-email" placeholder="contact@lieu.fr"></div>
+      <div class="field"><label>Segment</label><input type="text" id="f-segment" placeholder="Restaurant médiéval…" list="segment-options"></div>
+      <div class="field"><label>Date de contact</label><input type="date" id="f-date"></div>
+      <div class="field"><label>Statut</label><select id="f-status"></select></div>
+      <div class="field"><label>Note</label><input type="text" id="f-note" placeholder="Optionnel"></div>
+    </div>
+    <datalist id="segment-options"></datalist>
+    <div class="panel-actions">
+      <button id="btn-cancel-add" class="ghost" style="text-transform:uppercase;">Annuler</button>
+      <button id="btn-save-add" class="primary">Enregistrer</button>
+    </div>
+  </div>
+
+  <div class="list-head">
+    <h2 style="font-size:19px;">Prospects</h2>
+    <span class="count" id="list-count"></span>
+  </div>
+  <div class="cards" id="cards"></div>
+
+  <footer class="page-footer">Kleiomné · outil interne — données privées, non partagées.</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STATUSES = [
+    { key: "Envoyé", color: "var(--st-envoye)" },
+    { key: "Ouvert / cliqué", color: "var(--st-ouvert)" },
+    { key: "Relancé", color: "var(--st-relance)" },
+    { key: "Répondu", color: "var(--st-repondu)" },
+    { key: "Sans réponse", color: "var(--st-sansreponse)" },
+    { key: "À identifier", color: "var(--st-identifier)" }
+  ];
+  var STATUS_COLOR = {};
+  STATUSES.forEach(function(s){ STATUS_COLOR[s.key] = s.color; });
+
+  var SEED = [
+    { venue:"La Roseraie de Provins", email:"laroseraiedeprovins@gmail.com", segment:"Jardin patrimonial", date:"2026-09-14", status:"Envoyé", note:"", opensCount:0, opensLast:null },
+    { venue:"La Plume de Phénix", email:"laplumedephenix@gmail.com", segment:"Bar à thème", date:"2026-09-14", status:"Ouvert / cliqué", note:"", opensCount:2, opensLast:"2026-09-14T00:00:00.000Z" },
+    { venue:"Krügen", email:"krugenparis@gmail.com", segment:"Crêperie", date:"2026-09-11", status:"Ouvert / cliqué", note:"", opensCount:1, opensLast:"2026-09-14T00:00:00.000Z" },
+    { venue:"Le Repère de Merlin", email:"lereperedemerlin77@gmail.com", segment:"Crêperie", date:"2026-09-11", status:"Ouvert / cliqué", note:"Contact le plus engagé à date", opensCount:6, opensLast:"2026-09-14T00:00:00.000Z" },
+    { venue:"Les Caves Alliées", email:"contact@lescavesalliees.fr", segment:"Bar médiéval", date:"2026-09-08", status:"Envoyé", note:"Contact : Chris — cible prioritaire pour un événement pilote", opensCount:0, opensLast:null },
+    { venue:"Au Bistrot de la Montagne", email:"contact@restogroupe.paris", segment:"Restaurant médiéval", date:"2026-09-07", status:"Ouvert / cliqué", note:"", opensCount:2, opensLast:"2026-09-07T00:00:00.000Z" },
+    { venue:"Aux Anysetiers du Roy", email:"anysetiersduroy@gmail.com", segment:"Restaurant médiéval", date:"2026-09-07", status:"Envoyé", note:"", opensCount:0, opensLast:null },
+    { venue:"Chez Hervichou", email:"lechenaldemery@gmail.com", segment:"Guinguette", date:"2026-09-03", status:"Sans réponse", note:"Dîner immersif Belle Époque proposé", opensCount:0, opensLast:null }
+  ];
+
+  var els = {};
+  ["dash","search","sort","status-chips","btn-import","btn-add","import-panel","mailsuite-input",
+   "btn-parse","import-preview","add-panel","f-venue","f-email","f-segment","f-date","f-status","f-note",
+   "segment-options","btn-cancel-add","btn-save-add","cards","list-count","sync-dot","sync-text"
+  ].forEach(function(id){ els[id.replace(/-([a-z])/g, function(_,c){return c.toUpperCase();})] = document.getElementById(id); });
+
+  var state = {
+    contacts: [],
+    activeStatuses: new Set(),
+    search: "",
+    sort: "date-desc",
+    parsedImport: null
+  };
+
+  // ---------- storage adapter: db capability, falling back to localStorage ----------
+  var store = { mode: "connecting", db: null };
+  var LOCAL_KEY = "kleiomne-crm-contacts-v1";
+
+  function uid(){ return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+
+  function localLoad(){
+    try{
+      var raw = localStorage.getItem(LOCAL_KEY);
+      if(!raw){
+        var seeded = {};
+        SEED.forEach(function(c){ var id = uid(); seeded[id] = Object.assign({id:id}, c); });
+        localStorage.setItem(LOCAL_KEY, JSON.stringify(seeded));
+        return seeded;
+      }
+      return JSON.parse(raw);
+    }catch(e){ return {}; }
+  }
+  function localSave(obj){ try{ localStorage.setItem(LOCAL_KEY, JSON.stringify(obj)); }catch(e){} }
+
+  function setSyncStatus(mode){
+    if(mode === "db"){
+      els.syncDot.className = "sync-dot";
+      els.syncText.textContent = "Enregistrement automatique actif";
+    } else if(mode === "local"){
+      els.syncDot.className = "sync-dot local";
+      els.syncText.textContent = "Stockage local à cet appareil (mode dégradé)";
+    } else {
+      els.syncDot.className = "sync-dot local";
+      els.syncText.textContent = "Connexion…";
+    }
+  }
+
+  function startLocalMode(){
+    store.mode = "local";
+    setSyncStatus("local");
+    var data = localLoad();
+    state.contacts = Object.keys(data).map(function(id){ return data[id]; });
+    renderAll();
+    store.localAdd = function(payload){
+      var data = localLoad();
+      var id = uid();
+      data[id] = Object.assign({id:id}, payload);
+      localSave(data);
+      state.contacts = Object.keys(data).map(function(k){ return data[k]; });
+      renderAll();
+    };
+    store.localUpdate = function(id, payload){
+      var data = localLoad();
+      if(!data[id]) return;
+      data[id] = Object.assign({}, data[id], payload);
+      localSave(data);
+      state.contacts = Object.keys(data).map(function(k){ return data[k]; });
+      renderAll();
+    };
+    store.localRemove = function(id){
+      var data = localLoad();
+      delete data[id];
+      localSave(data);
+      state.contacts = Object.keys(data).map(function(k){ return data[k]; });
+      renderAll();
+    };
+  }
+
+  function startDbMode(db){
+    store.mode = "db";
+    store.db = db;
+    setSyncStatus("db");
+    var col = db.collection("contacts");
+    col.onSnapshot(function(snap){
+      state.contacts = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+      renderAll();
+    }, function(err){
+      console.warn("db error, falling back to local storage", err);
+      startLocalMode();
+    });
+  }
+
+  function addContact(payload){
+    payload.createdAt = new Date().toISOString();
+    payload.updatedAt = payload.createdAt;
+    if(store.mode === "db"){ store.db.collection("contacts").add(payload).catch(function(){}); }
+    else { store.localAdd(payload); }
+  }
+  function updateContact(id, payload){
+    payload.updatedAt = new Date().toISOString();
+    if(store.mode === "db"){ store.db.collection("contacts").doc(id).update(payload).catch(function(){}); }
+    else { store.localUpdate(id, payload); }
+  }
+  function removeContact(id){
+    if(store.mode === "db"){ store.db.collection("contacts").doc(id).delete().catch(function(){}); }
+    else { store.localRemove(id); }
+  }
+
+  // ---------- rendering ----------
+  var dtFmt = new Intl.DateTimeFormat("fr-FR", { day:"numeric", month:"short", year:"numeric" });
+  function fmtDate(iso){
+    if(!iso) return "—";
+    var d = new Date(iso);
+    if(isNaN(d)) return "—";
+    return dtFmt.format(d);
+  }
+  function relLabel(iso){
+    if(!iso) return "";
+    var d = new Date(iso);
+    if(isNaN(d)) return "";
+    var diffMs = Date.now() - d.getTime();
+    var min = Math.round(diffMs/60000);
+    if(min < 1) return "à l'instant";
+    if(min < 60) return "il y a " + min + " min";
+    var h = Math.round(min/60);
+    if(h < 24) return "il y a " + h + " h";
+    var j = Math.round(h/24);
+    if(j < 30) return "il y a " + j + " j";
+    var mo = Math.round(j/30);
+    if(mo < 12) return "il y a " + mo + " mois";
+    return "il y a " + Math.round(mo/12) + " an(s)";
+  }
+
+  function renderDashboard(){
+    var counts = {};
+    STATUSES.forEach(function(s){ counts[s.key] = 0; });
+    state.contacts.forEach(function(c){ if(counts[c.status] === undefined) counts[c.status]=0; counts[c.status]++; });
+    els.dash.innerHTML = STATUSES.map(function(s){
+      var active = state.activeStatuses.has(s.key) ? " active" : "";
+      return '<div class="tile'+active+'" style="--tile-color:'+s.color+'" data-status="'+esc(s.key)+'">' +
+        '<div class="n">'+counts[s.key]+'</div><div class="t">'+esc(s.key)+'</div></div>';
+    }).join("");
+    Array.prototype.forEach.call(els.dash.querySelectorAll(".tile"), function(t){
+      t.addEventListener("click", function(){
+        var st = t.getAttribute("data-status");
+        if(state.activeStatuses.has(st)) state.activeStatuses.delete(st); else state.activeStatuses.add(st);
+        renderAll();
+      });
+    });
+  }
+
+  function renderChips(){
+    els.statusChips.innerHTML = STATUSES.map(function(s){
+      var on = state.activeStatuses.has(s.key) ? " on" : "";
+      return '<div class="chip'+on+'" data-status="'+esc(s.key)+'">'+esc(s.key)+'</div>';
+    }).join("") + (state.activeStatuses.size ? '<div class="chip" id="chip-clear" style="opacity:.75;">Réinitialiser</div>' : "");
+    Array.prototype.forEach.call(els.statusChips.querySelectorAll(".chip[data-status]"), function(c){
+      c.addEventListener("click", function(){
+        var st = c.getAttribute("data-status");
+        if(state.activeStatuses.has(st)) state.activeStatuses.delete(st); else state.activeStatuses.add(st);
+        renderAll();
+      });
+    });
+    var clr = document.getElementById("chip-clear");
+    if(clr) clr.addEventListener("click", function(){ state.activeStatuses.clear(); renderAll(); });
+  }
+
+  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  }); }
+
+  function visibleContacts(){
+    var q = state.search.trim().toLowerCase();
+    var list = state.contacts.filter(function(c){
+      if(state.activeStatuses.size && !state.activeStatuses.has(c.status)) return false;
+      if(!q) return true;
+      return [c.venue,c.email,c.segment,c.note].join(" ").toLowerCase().indexOf(q) !== -1;
+    });
+    list.sort(function(a,b){
+      if(state.sort === "alpha") return (a.venue||"").localeCompare(b.venue||"", "fr");
+      var da = a.date || "", db_ = b.date || "";
+      if(state.sort === "date-asc") return da.localeCompare(db_);
+      return db_.localeCompare(da);
+    });
+    return list;
+  }
+
+  function renderList(){
+    var list = visibleContacts();
+    els.listCount.textContent = list.length + " / " + state.contacts.length + " contact" + (state.contacts.length>1?"s":"");
+    if(!list.length){
+      els.cards.innerHTML = '<div class="empty-state">Aucun contact ne correspond aux filtres actuels.<br><b>Ajustez la recherche ou les statuts sélectionnés.</b></div>';
+      return;
+    }
+    els.cards.innerHTML = list.map(cardHTML).join("");
+    Array.prototype.forEach.call(els.cards.querySelectorAll("[data-id]"), wireCard);
+  }
+
+  function cardHTML(c){
+    var color = STATUS_COLOR[c.status] || "var(--gold)";
+    var statusOptions = STATUSES.map(function(s){
+      return '<option value="'+esc(s.key)+'"'+(s.key===c.status?" selected":"")+'>'+esc(s.key)+'</option>';
+    }).join("");
+    var opens = c.opensCount ? (
+      '<div class="opens-count">'+c.opensCount+' ouverture'+(c.opensCount>1?'s':'')+'</div>' +
+      '<div class="opens-last">dernière '+fmtDate(c.opensLast)+' · '+relLabel(c.opensLast)+'</div>'
+    ) : '<div class="opens-val" style="color:var(--ivory-dim);">—</div>';
+    return (
+      '<div class="card" data-id="'+esc(c.id)+'" style="--card-color:'+color+'">'+
+        '<div><div class="venue">'+esc(c.venue||"(sans nom)")+'</div>'+
+          '<div class="email">'+esc(c.email||"")+'</div>'+
+          '<div class="segment">'+esc(c.segment||"")+'</div></div>'+
+        '<div class="field-mini"><label>Contact</label><div class="date-val">'+fmtDate(c.date)+'</div></div>'+
+        '<div class="field-mini"><label>Statut</label>'+
+          '<select class="status-select" data-field="status" style="border-color:'+color+'">'+statusOptions+'</select></div>'+
+        '<div class="field-mini"><label>Ouvertures</label>'+opens+'</div>'+
+        '<div class="field-mini"><label>Note</label><textarea class="note-area" data-field="note" placeholder="—">'+esc(c.note||"")+'</textarea></div>'+
+        '<div class="card-actions"><button class="ghost" data-action="delete">Supprimer</button></div>'+
+      '</div>'
+    );
+  }
+
+  function wireCard(cardEl){
+    var id = cardEl.getAttribute("data-id");
+    var statusSel = cardEl.querySelector('[data-field="status"]');
+    statusSel.addEventListener("change", function(){
+      updateContact(id, { status: statusSel.value });
+    });
+    var noteArea = cardEl.querySelector('[data-field="note"]');
+    var noteSave = function(){ updateContact(id, { note: noteArea.value }); };
+    noteArea.addEventListener("blur", noteSave);
+    noteArea.addEventListener("keydown", function(e){ if(e.key === "Enter" && (e.metaKey||e.ctrlKey)) { noteArea.blur(); } });
+    cardEl.querySelector('[data-action="delete"]').addEventListener("click", function(){
+      var c = state.contacts.find(function(x){ return x.id === id; });
+      if(confirm('Supprimer le contact "'+((c&&c.venue)||"")+'" ? Cette action est définitive.')){
+        removeContact(id);
+      }
+    });
+  }
+
+  function renderAll(){
+    renderDashboard();
+    renderChips();
+    renderList();
+    var segments = Array.from(new Set(state.contacts.map(function(c){ return c.segment; }).filter(Boolean)));
+    els.segmentOptions.innerHTML = segments.map(function(s){ return '<option value="'+esc(s)+'">'; }).join("");
+  }
+
+  // ---------- add contact panel ----------
+  STATUSES.forEach(function(s){
+    var o = document.createElement("option"); o.value = s.key; o.textContent = s.key; els.fStatus.appendChild(o);
+  });
+  function today(){ return new Date().toISOString().slice(0,10); }
+  function openAddPanel(){
+    els.fVenue.value=""; els.fEmail.value=""; els.fSegment.value=""; els.fDate.value = today();
+    els.fStatus.value = "Envoyé"; els.fNote.value="";
+    els.addPanel.hidden = false; els.importPanel.hidden = true;
+    els.fVenue.focus();
+  }
+  els.btnAdd.addEventListener("click", openAddPanel);
+  els.btnCancelAdd.addEventListener("click", function(){ els.addPanel.hidden = true; });
+  els.btnSaveAdd.addEventListener("click", function(){
+    if(!els.fVenue.value.trim()){ els.fVenue.focus(); return; }
+    addContact({
+      venue: els.fVenue.value.trim(),
+      email: els.fEmail.value.trim(),
+      segment: els.fSegment.value.trim(),
+      date: els.fDate.value || today(),
+      status: els.fStatus.value,
+      note: els.fNote.value.trim(),
+      opensCount: 0,
+      opensLast: null
+    });
+    els.addPanel.hidden = true;
+  });
+
+  // ---------- search / sort ----------
+  els.search.addEventListener("input", function(){ state.search = els.search.value; renderList(); });
+  els.sort.addEventListener("change", function(){ state.sort = els.sort.value; renderList(); });
+
+  // ---------- mailsuite import ----------
+  els.btnImport.addEventListener("click", function(){
+    els.importPanel.hidden = !els.importPanel.hidden;
+    els.addPanel.hidden = true;
+  });
+
+  var UNIT_MS = { minute:60e3, heure:3600e3, jour:86400e3, semaine:7*86400e3, mois:30*86400e3, an:365*86400e3 };
+  var EVENT_RE = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\s+a\s+(?:ouvert|cliqu[ée]\s+sur(?:\s+un\s+lien\s+dans)?)\s+(?:votre|vos)\s+e-?mails?\s*(?:\((\d+)(?:[eè]re|er|e)?\s*fois\))?([\s\S]*?)il\s+y\s+a\s+(\d+|quelques|une?|un)\s*(minute|heure|jour|semaine|mois|an)s?/gi;
+
+  function parseMailsuite(text){
+    var byEmail = {};
+    var m;
+    EVENT_RE.lastIndex = 0;
+    while((m = EVENT_RE.exec(text))){
+      var email = m[1].toLowerCase();
+      var count = m[2] ? parseInt(m[2],10) : 1;
+      var subject = m[3].replace(/\s+/g," ").trim();
+      var amountRaw = m[4];
+      var amount = /^\d+$/.test(amountRaw) ? parseInt(amountRaw,10) : 1;
+      var unit = m[5].toLowerCase();
+      var when = new Date(Date.now() - amount * (UNIT_MS[unit] || UNIT_MS.minute));
+      if(!byEmail[email] || count > byEmail[email].count){
+        byEmail[email] = { email: email, count: count, when: when.toISOString(), subject: subject };
+      } else if(count === byEmail[email].count && when > new Date(byEmail[email].when)){
+        byEmail[email].when = when.toISOString();
+        byEmail[email].subject = subject;
+      }
+    }
+    return Object.keys(byEmail).map(function(k){ return byEmail[k]; });
+  }
+
+  els.btnParse.addEventListener("click", function(){
+    var text = els.mailsuiteInput.value;
+    var events = parseMailsuite(text);
+    state.parsedImport = events;
+    renderImportPreview();
+  });
+
+  function renderImportPreview(){
+    var events = state.parsedImport || [];
+    els.importPreview.hidden = false;
+    if(!events.length){
+      els.importPreview.innerHTML = '<div class="import-empty">Aucun événement d\'ouverture reconnu dans ce texte. Vérifiez le format collé.</div>';
+      return;
+    }
+    var rows = events.map(function(ev, idx){
+      var contact = state.contacts.find(function(c){ return (c.email||"").toLowerCase() === ev.email; });
+      var willUpgrade = contact && (contact.status === "Envoyé" || contact.status === "Relancé");
+      var label;
+      if(contact){
+        label = '<span class="who"><b>'+esc(contact.venue||contact.email)+'</b> — '+ev.count+' ouverture'+(ev.count>1?'s':'')+', dernière '+fmtDate(ev.when)+
+          (willUpgrade ? ' <span style="color:var(--st-ouvert);">→ statut mis à jour en « Ouvert / cliqué »</span>' : '') + '</span>';
+      } else {
+        label = '<span class="who">'+esc(ev.email)+' <span class="tag-new">Nouveau — à identifier</span></span>';
+      }
+      return '<div class="import-row"><input type="checkbox" checked data-idx="'+idx+'">' +
+        '<div class="main">'+label+'<div class="meta">'+(ev.subject?('Objet : '+esc(ev.subject)):'')+'</div></div></div>';
+    }).join("");
+    els.importPreview.innerHTML = rows +
+      '<div class="panel-actions" style="margin-top:14px;"><button class="primary" id="btn-apply-import">Appliquer les mises à jour sélectionnées</button></div>';
+    document.getElementById("btn-apply-import").addEventListener("click", applyImport);
+  }
+
+  function applyImport(){
+    var events = state.parsedImport || [];
+    var checked = Array.prototype.map.call(els.importPreview.querySelectorAll('input[type=checkbox]'), function(cb){ return cb.checked; });
+    events.forEach(function(ev, idx){
+      if(!checked[idx]) return;
+      var contact = state.contacts.find(function(c){ return (c.email||"").toLowerCase() === ev.email; });
+      if(contact){
+        var newCount = Math.max(contact.opensCount||0, ev.count);
+        var newLast = contact.opensLast && new Date(contact.opensLast) > new Date(ev.when) ? contact.opensLast : ev.when;
+        var patch = { opensCount: newCount, opensLast: newLast };
+        if(contact.status === "Envoyé" || contact.status === "Relancé") patch.status = "Ouvert / cliqué";
+        updateContact(contact.id, patch);
+      } else {
+        addContact({
+          venue: "", email: ev.email, segment: "", date: today(),
+          status: "À identifier", note: "Identifié via import Mailsuite",
+          opensCount: ev.count, opensLast: ev.when
+        });
+      }
+    });
+    els.mailsuiteInput.value = "";
+    state.parsedImport = null;
+    els.importPreview.hidden = true;
+    els.importPreview.innerHTML = "";
+    els.importPanel.hidden = true;
+  }
+
+  // ---------- boot ----------
+  renderAll();
+  setSyncStatus("connecting");
+  if(window.claude && window.claude.use){
+    window.claude.use("db").then(function(db){
+      if(db) startDbMode(db); else startLocalMode();
+    }).catch(function(){ startLocalMode(); });
+    setTimeout(function(){ if(store.mode === "connecting") startLocalMode(); }, 4000);
+  } else {
+    startLocalMode();
+  }
+})();
+</script>
+</body>
+</html>
