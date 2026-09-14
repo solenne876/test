@@ -239,6 +239,11 @@
   @media (max-width: 480px){ .modal .m-grid{ grid-template-columns: 1fr; } }
   .modal .m-field label{ display:block; font-size: 11px; color: var(--ivory-dim); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; font-family:"Cormorant SC",serif; }
   .modal .m-note textarea{ min-height: 70px; }
+  .tag-check-group{ display:flex; flex-wrap: wrap; gap: 7px; }
+  .tag-check{ display:inline-flex; align-items:center; gap: 6px; font-family:"Cormorant SC",serif; font-size: 11.5px; letter-spacing: .04em; text-transform: uppercase; border: 1px solid var(--hairline-strong); border-radius: 999px; padding: 5px 12px 5px 9px; cursor: pointer; color: var(--ivory-dim); user-select: none; }
+  .tag-check input{ accent-color: var(--gold); width: 13px; height: 13px; }
+  .tag-check.on{ background: var(--gold); border-color: var(--gold); color: var(--navy); }
+  .emails-box textarea{ min-height: 160px; font-size: 14.5px; white-space: pre-wrap; }
   .analysis-box{ margin-top: 20px; border-top: 1px solid var(--hairline); padding-top: 18px; }
   .analysis-box .a-head{ display:flex; align-items:center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
   .analysis-box .a-head h3{ font-family:"Cinzel", serif; font-size: 15px; color: var(--gold); }
@@ -334,6 +339,11 @@
       <div id="an-top-engaged"></div>
     </div>
     <div class="panel an-section">
+      <h2>Arguments qui engagent le plus</h2>
+      <p class="hint">Taux d'ouverture des prospects par argument utilisé dans le mail (un mail combine souvent plusieurs arguments). Échantillon encore petit — à lire comme une tendance à confirmer, pas une statistique définitive.</p>
+      <div id="an-arg-bars"></div>
+    </div>
+    <div class="panel an-section">
       <h2>À relancer maintenant</h2>
       <p class="hint">Relance due à 7 jours ouvrés sans engagement depuis le premier contact, ou 5 jours ouvrés après une ouverture/clic resté sans réponse.</p>
       <div id="an-relance-list"></div>
@@ -372,6 +382,21 @@
   var STATUS_COLOR = {};
   STATUSES.forEach(function(s){ STATUS_COLOR[s.key] = s.color; });
 
+  var ARG_TAGS = [
+    { key: "legende", label: "Ancrage légendaire / historique du lieu" },
+    { key: "identite_marque", label: "Identité de marque déjà en place" },
+    { key: "remplissage", label: "Remplissage d'un créneau ciblé" },
+    { key: "differenciation", label: "Différenciation concurrentielle" },
+    { key: "cle_en_main", label: "Clé en main / zéro effort" },
+    { key: "recurrence", label: "Récurrence / rendez-vous fidélisant" },
+    { key: "personnalisation", label: "Personnalisation nominative" },
+    { key: "offre_pilote", label: "Offre pilote / tarif réduit" },
+    { key: "preuve_concrete", label: "Preuve concrète jointe (dossier)" },
+    { key: "calendaire", label: "Moment calendaire / saisonnier" }
+  ];
+  var ARG_TAG_LABEL = {};
+  ARG_TAGS.forEach(function(t){ ARG_TAG_LABEL[t.key] = t.label; });
+
   var SEED = [
     { venue:"La Roseraie de Provins", email:"laroseraiedeprovins@gmail.com", segment:"Jardin patrimonial", date:"2026-09-14", status:"Envoyé", note:"", opensCount:0, opensLast:null },
     { venue:"La Plume de Phénix", email:"laplumedephenix@gmail.com", segment:"Bar à thème", date:"2026-09-14", status:"Ouvert / cliqué", note:"", opensCount:2, opensLast:"2026-09-14T00:00:00.000Z" },
@@ -387,7 +412,7 @@
   ["dash","search","sort","status-chips","btn-import","btn-add","import-panel","mailsuite-input",
    "btn-parse","import-preview","add-panel","f-venue","f-email","f-segment","f-date","f-status","f-note",
    "segment-options","btn-cancel-add","btn-save-add","cards","list-count","sync-dot","sync-text",
-   "view-prospects","view-analytics","an-kpis","an-status-bars","an-segment-bars","an-top-engaged","an-relance-list",
+   "view-prospects","view-analytics","an-kpis","an-status-bars","an-segment-bars","an-top-engaged","an-relance-list","an-arg-bars",
    "detail-overlay","detail-modal","detail-body","detail-close",
    "export-overlay","export-modal","export-body","export-close","btn-export"
   ].forEach(function(id){ els[id.replace(/-([a-z])/g, function(_,c){return c.toUpperCase();})] = document.getElementById(id); });
@@ -758,6 +783,13 @@
         '<div class="m-field"><label>Relance</label><div style="color:'+(ri.due?'var(--terracotta)':'var(--ivory-dim)')+';">'+esc(relanceText)+'</div></div>'+
       '</div>'+
       '<div class="m-field m-note"><label>Note</label><textarea id="detail-note">'+esc(c.note||"")+'</textarea></div>'+
+      '<div class="m-field"><label>Arguments utilisés dans le mail</label><div class="tag-check-group" id="detail-argtags">'+
+        ARG_TAGS.map(function(t){
+          var on = (c.argTags||[]).indexOf(t.key) !== -1;
+          return '<label class="tag-check'+(on?' on':'')+'"><input type="checkbox" value="'+esc(t.key)+'"'+(on?' checked':'')+'>'+esc(t.label)+'</label>';
+        }).join("") +
+      '</div></div>'+
+      '<div class="m-field emails-box"><label>Emails envoyés (objet + texte)</label><textarea id="detail-emails" placeholder="Collez ici le texte des mails envoyés à ce prospect…">'+esc(c.emailsText||"")+'</textarea></div>'+
       '<div class="analysis-box"><div class="a-head"><h3>Analyse</h3></div>'+analysisHTML+'</div>';
 
     var dStatus = document.getElementById("detail-status");
@@ -768,6 +800,18 @@
     });
     var dNote = document.getElementById("detail-note");
     dNote.addEventListener("blur", function(){ updateContact(c.id, { note: dNote.value }); });
+
+    var dEmails = document.getElementById("detail-emails");
+    dEmails.addEventListener("blur", function(){ updateContact(c.id, { emailsText: dEmails.value }); });
+
+    Array.prototype.forEach.call(document.querySelectorAll("#detail-argtags input"), function(cb){
+      cb.addEventListener("change", function(){
+        cb.closest(".tag-check").classList.toggle("on", cb.checked);
+        var picked = Array.prototype.filter.call(document.querySelectorAll("#detail-argtags input"), function(x){ return x.checked; })
+          .map(function(x){ return x.value; });
+        updateContact(c.id, { argTags: picked });
+      });
+    });
 
     var genBtn = document.getElementById("btn-analysis-gen");
     if(genBtn) genBtn.addEventListener("click", function(){ generateAnalysis(c.id, false); });
@@ -791,8 +835,14 @@
     lines.push("- Jours ouvrés écoulés depuis le dernier point de contact (envoi, relance ou ouverture) : " + ri.days + " (seuil de relance : " + ri.threshold + "j)");
     lines.push("- Relance due selon ce seuil : " + (ri.due ? "oui" : "non"));
     if(c.note) lines.push("- Note existante : " + c.note);
+    if(c.argTags && c.argTags.length) lines.push("- Arguments utilisés dans le mail : " + c.argTags.map(function(k){ return ARG_TAG_LABEL[k] || k; }).join(", "));
+    if(c.emailsText){
+      lines.push("");
+      lines.push("Voici le texte du ou des emails envoyés à ce prospect :");
+      lines.push(c.emailsText.slice(0, 4000));
+    }
     lines.push("");
-    lines.push("Rédige une analyse courte (4 à 6 phrases, en français, pas de puces, pas de formules creuses) : où en est ce prospect, quel est le signal le plus important dans ces données, et quelle action concrète recommandes-tu à Solenne maintenant, avec son niveau d'urgence.");
+    lines.push("Rédige une analyse courte (4 à 6 phrases, en français, pas de puces, pas de formules creuses) : où en est ce prospect, quel est le signal le plus important dans ces données (y compris, si pertinent, dans l'angle et les arguments utilisés dans le mail), et quelle action concrète recommandes-tu à Solenne maintenant, avec son niveau d'urgence.");
     return lines.join("\n");
   }
 
@@ -857,7 +907,9 @@
       lines.push("Ouvertures Mailsuite : " + (c.opensCount ? (c.opensCount + ", dernière " + fmtDate(c.opensLast)) : "aucune"));
       lines.push("Relance : " + (c.status === "Répondu" ? "répondu, pas de relance" : (ri.days + "j ouvrés écoulés (seuil " + ri.threshold + "j)" + (ri.due ? " — DUE" : ""))));
       lines.push("Note : " + (c.note || "—"));
+      lines.push("Arguments utilisés : " + ((c.argTags && c.argTags.length) ? c.argTags.map(function(k){ return ARG_TAG_LABEL[k] || k; }).join(", ") : "—"));
       lines.push("Analyse : " + (c.aiAnalysis ? c.aiAnalysis : "(non générée)"));
+      if(c.emailsText){ lines.push(""); lines.push("Emails envoyés :"); lines.push(c.emailsText); }
       lines.push("");
     });
     return lines.join("\n");
@@ -968,6 +1020,25 @@
       return '<div class="an-list-row"><span class="who"><b>'+esc(c.venue||c.email)+'</b> — '+esc(c.status)+'</span>' +
         '<span class="meta">'+c.opensCount+' ouverture'+(c.opensCount>1?'s':'')+' · dernière '+fmtDate(c.opensLast)+'</span></div>';
     }).join("") : '<div class="an-empty">Aucune ouverture enregistrée pour le moment.</div>';
+
+    var tagStats = {};
+    ARG_TAGS.forEach(function(t){ tagStats[t.key] = { sent: 0, engaged: 0 }; });
+    state.contacts.forEach(function(c){
+      (c.argTags||[]).forEach(function(k){
+        if(!tagStats[k]) return;
+        tagStats[k].sent++;
+        if((c.opensCount||0) > 0) tagStats[k].engaged++;
+      });
+    });
+    var tagRows = ARG_TAGS.filter(function(t){ return tagStats[t.key].sent > 0; }).map(function(t){
+      var s = tagStats[t.key];
+      return { label: t.label, sent: s.sent, engaged: s.engaged, rate: Math.round((s.engaged/s.sent)*100) };
+    }).sort(function(a,b){ return b.rate - a.rate || b.sent - a.sent; });
+    els.anArgBars.innerHTML = tagRows.length ? tagRows.map(function(r){
+      return '<div class="an-bar-row"><div class="lbl" title="'+esc(r.label)+'">'+esc(r.label)+'</div>'+
+        '<div class="an-bar-track"><div class="an-bar-fill" style="width:'+Math.max(r.rate, 2)+'%;background:var(--gold);"></div></div>'+
+        '<div class="val">'+r.rate+'% · '+r.engaged+'/'+r.sent+'</div></div>';
+    }).join("") : '<div class="an-empty">Ouvrez une fiche et cochez ses arguments pour faire apparaître cette analyse.</div>';
 
     var dueList = state.contacts.filter(function(c){ return relanceInfo(c).due; })
       .sort(function(a,b){ return relanceInfo(b).days - relanceInfo(a).days; });
