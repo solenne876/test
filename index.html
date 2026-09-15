@@ -254,6 +254,30 @@
   .analysis-empty{ color: var(--ivory-dim); font-size: 14.5px; }
   #export-text{ min-height: 340px; font-family: "Cormorant Garamond", serif; font-size: 14.5px; white-space: pre; }
   #relance-draft-text{ min-height: 260px; font-size: 15.5px; white-space: pre-wrap; }
+
+  /* venue / tunnel generator */
+  .card.venue-card{ grid-template-columns: 1.5fr 1.3fr 1fr auto; }
+  @media (max-width: 980px){ .card.venue-card{ grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 560px){ .card.venue-card{ grid-template-columns: 1fr; } }
+  .venue-cats{ font-size: 13px; color: var(--gold-soft); margin-top: 6px; }
+  .kb-textarea{ min-height: 260px; font-size: 14.5px; white-space: pre-wrap; }
+  .step-row, .qsec-row{
+    background: var(--navy-3); border: 1px solid var(--hairline); border-radius: 8px;
+    padding: 12px 14px; margin-bottom: 10px;
+  }
+  .step-row .step-head, .qsec-row .qsec-head{ display:flex; gap:10px; align-items:baseline; margin-bottom: 8px; }
+  .step-row .step-num{ font-family:"Cinzel", serif; color: var(--gold); font-size: 14px; flex: none; }
+  .step-row input[type=text]{ font-size: 15px; }
+  .step-row .step-grid{ display:grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; }
+  @media (max-width: 640px){ .step-row .step-grid{ grid-template-columns: 1fr; } }
+  .step-row textarea{ min-height: 44px; font-size: 14px; margin-top: 8px; }
+  .qsec-row input[type=text]{ font-family:"Cinzel", serif; font-size: 15px; color: var(--gold-soft); margin-bottom: 8px; }
+  .qsec-questions{ display:flex; flex-direction:column; gap: 6px; }
+  .qsec-q-line{ display:flex; gap:8px; align-items:flex-start; }
+  .qsec-q-line textarea{ min-height: 36px; font-size: 14.5px; flex:1; }
+  .row-remove{ padding: 5px 9px; font-size: 11.5px; color: var(--terracotta); border-color: transparent; flex: none; }
+  .row-remove:hover{ border-color: transparent; background: rgba(192,104,64,0.12); }
+  .research-status{ font-size: 13.5px; color: var(--ivory-dim); font-style: italic; margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -271,6 +295,8 @@
   <div class="tabs">
     <button class="tab-btn active" data-tab="prospects">Prospects</button>
     <button class="tab-btn" data-tab="analytics">Analytics</button>
+    <button class="tab-btn" data-tab="tunnels">Tunnels de prospection</button>
+    <button class="tab-btn" data-tab="connaissance">Base de connaissance</button>
   </div>
 
   <div id="view-prospects">
@@ -352,6 +378,54 @@
     </div>
   </div>
 
+  <div id="view-tunnels" hidden>
+    <div class="toolbar">
+      <div class="grow"><input type="text" id="venue-search" placeholder="Rechercher un lieu…"></div>
+      <button id="btn-add-venue" class="primary">+ Nouveau lieu</button>
+    </div>
+
+    <div class="panel" id="venue-add-panel" hidden>
+      <h2>Nouveau lieu</h2>
+      <p class="hint">Renseignez le minimum connu — le reste se complète depuis la fiche une fois créée (recherche, tunnel, questionnaire).</p>
+      <div class="field-grid">
+        <div class="field"><label>Nom du lieu</label><input type="text" id="v-name" placeholder="Château de…"></div>
+        <div class="field"><label>Email de contact</label><input type="email" id="v-email" placeholder="contact@lieu.fr"></div>
+        <div class="field"><label>Téléphone</label><input type="text" id="v-phone" placeholder="Optionnel"></div>
+      </div>
+      <div class="field" style="margin-bottom:14px;">
+        <label style="display:block; font-size:11.5px; color:var(--gold); margin-bottom:6px;">Catégorie(s) envisagée(s) — laisser vide pour que l'outil les suggère</label>
+        <div class="tag-check-group" id="v-cats"></div>
+      </div>
+      <div class="panel-actions">
+        <button id="btn-cancel-venue" class="ghost" style="text-transform:uppercase;">Annuler</button>
+        <button id="btn-save-venue" class="primary">Créer la fiche</button>
+      </div>
+    </div>
+
+    <div class="list-head">
+      <h2 style="font-size:19px;">Lieux</h2>
+      <span class="count" id="venue-count"></span>
+    </div>
+    <div class="cards" id="venue-cards"></div>
+  </div>
+
+  <div id="view-connaissance" hidden>
+    <div class="panel">
+      <h2>Process commercial</h2>
+      <p class="hint">Trame d'acquisition, délais indicatifs par catégorie, grille tarifaire — sert de référence au générateur de tunnel. Modifiable directement ici.</p>
+      <textarea id="kb-process" class="kb-textarea"></textarea>
+    </div>
+    <div class="panel">
+      <h2>Questionnaire découverte</h2>
+      <p class="hint">Tronc commun + branches profil de lieu + branches par catégorie — sert de base au questionnaire généré pour chaque lieu.</p>
+      <textarea id="kb-questionnaire" class="kb-textarea"></textarea>
+    </div>
+    <div class="panel-actions">
+      <button id="btn-save-kb" class="primary">Enregistrer</button>
+    </div>
+    <div class="research-status" id="kb-save-status"></div>
+  </div>
+
   <footer class="page-footer">Kleiomné · outil interne — données privées, non partagées.</footer>
 </div>
 
@@ -373,6 +447,13 @@
   <div class="modal" id="relance-modal" role="dialog" aria-modal="true">
     <button class="modal-close" id="relance-close" aria-label="Fermer">✕ Fermer</button>
     <div id="relance-body"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="venue-overlay" hidden>
+  <div class="modal" id="venue-modal" role="dialog" aria-modal="true" style="max-width:760px;">
+    <button class="modal-close" id="venue-close" aria-label="Fermer">✕ Fermer</button>
+    <div id="venue-body"></div>
   </div>
 </div>
 
@@ -407,6 +488,136 @@
   var ARG_TAG_LABEL = {};
   ARG_TAGS.forEach(function(t){ ARG_TAG_LABEL[t.key] = t.label; });
 
+  var CATEGORIES = [
+    { key: "visite_theatralisee", label: "Visite théâtralisée" },
+    { key: "nocturne_chandelles", label: "Nocturne / Visite aux chandelles" },
+    { key: "diner_immersif", label: "Dîner immersif" },
+    { key: "murder_party", label: "Murder party" },
+    { key: "bal_fantasy", label: "Bal fantasy" },
+    { key: "enquete_immersive", label: "Enquête immersive / jeu de piste narratif" },
+    { key: "evenement_ponctuel", label: "Événement ponctuel (Halloween, Pâques, Noël)" }
+  ];
+  var CATEGORY_LABEL = {};
+  CATEGORIES.forEach(function(c){ CATEGORY_LABEL[c.key] = c.label; });
+
+  var FORMULES = [
+    { key: "spectacle", label: "Spectacle (grand groupe)" },
+    { key: "immersion", label: "Immersion totale (groupe restreint)" }
+  ];
+  var FORMULE_LABEL = {};
+  FORMULES.forEach(function(f){ FORMULE_LABEL[f.key] = f.label; });
+
+  var VENUE_STATUSES = [
+    { key: "Brouillon", color: "var(--st-identifier)" },
+    { key: "Recherche en cours", color: "var(--st-envoye)" },
+    { key: "Tunnel généré", color: "var(--st-ouvert)" },
+    { key: "Envoyé", color: "var(--st-relance)" },
+    { key: "Validé", color: "var(--st-repondu)" },
+    { key: "Abandonné", color: "var(--st-ko)" }
+  ];
+  var VENUE_STATUS_COLOR = {};
+  VENUE_STATUSES.forEach(function(s){ VENUE_STATUS_COLOR[s.key] = s.color; });
+
+  var SEED_PROCESS = [
+    "PROCESS COMMERCIAL KLEIOMNÉ — trame de prospection",
+    "",
+    "Étapes du tunnel, dans l'ordre. Toutes ne s'appliquent pas à tous les lieux : à adapter selon le profil (décisionnaire, lieu déjà scénarisé ou non, budget déjà mentionné...).",
+    "",
+    "1. Email 1 (premier contact) — J0.",
+    "2. Relance 1 — si pas de réponse, J+7 jours ouvrés (J+5 si ouverture/clic Mailsuite sans réponse).",
+    "3. Relance 2 — si toujours pas de réponse, J+7 jours ouvrés après la relance 1. Au-delà, statut « Sans réponse » ou « KO ».",
+    "4. Premier échange (téléphone ou visio) — sous 3 à 5 jours ouvrés après une réponse positive.",
+    "5. Visite du lieu — si pertinent et lieu accessible ; sous 1 à 3 semaines selon disponibilité. Peut être fusionnée avec le premier échange si le lieu est proche et disponible rapidement.",
+    "6. Évaluation des besoins — questionnaire découverte rempli pendant ou juste après la visite/l'échange.",
+    "7. Proposition chiffrée (devis) — sous 5 à 7 jours ouvrés après l'évaluation des besoins.",
+    "8. Validation / signature — délai très variable : propriétaire privé décide vite (1 à 3 semaines) ; collectivité, fondation ou groupe = cycle décisionnel long (1 à 3 mois).",
+    "9. Conception (concept narratif, scénario, direction artistique) — voir délais indicatifs par catégorie ci-dessous.",
+    "10. Recherche et briefing des prestataires (comédiens, traiteur, technique...) — en parallèle de la fin de la conception, 1 à 3 semaines.",
+    "11. Jour J — date fixée en amont avec le lieu.",
+    "12. Debrief — sous 1 semaine après l'événement.",
+    "13. Rejeu / proposition d'accompagnement annuel — dans les 2 à 4 semaines suivant le debrief, si le signal est positif (satisfaction, retombées mesurables).",
+    "",
+    "⚠ Ces délais sont des points de départ à ajuster au fil des projets réels — à corriger directement dans cette fiche.",
+    "",
+    "DÉLAIS DE CONCEPTION INDICATIFS PAR CATÉGORIE (étape 9, de la validation à la livraison du concept) :",
+    "- Visite théâtralisée : 2 à 3 semaines (formule Spectacle) / 3 à 4 semaines (Immersion totale).",
+    "- Nocturne / Visite aux chandelles : 2 à 3 semaines.",
+    "- Dîner immersif : 3 à 4 semaines (coordination traiteur incluse).",
+    "- Murder party : 3 à 5 semaines (écriture des rôles et objectifs individuels si Immersion totale).",
+    "- Bal fantasy : 3 à 5 semaines.",
+    "- Enquête immersive / jeu de piste narratif : 3 à 5 semaines.",
+    "- Événement ponctuel (Halloween, Pâques, Noël) : 2 à 3 semaines (déclinaison allégée d'un format existant) ou délai du format d'origine si créé pour l'occasion.",
+    "",
+    "GRILLE TARIFAIRE (pilier + add-ons) :",
+    "- Pilier central — scénarisation d'un événement immersif (un des 7 formats) : sur devis, généralement 2 500 € à 4 000 €. Formule Spectacle en bas de fourchette (grand groupe, prix par personne plus bas) ; formule Immersion totale en haut (groupe restreint, rôles individuels, prix par personne plus élevé). Varie aussi selon la taille du lieu et le nombre de participants.",
+    "- Storytelling (add-on, uniquement si le questionnaire révèle une matière narrative exploitable) : Socle 1 200 € (tarif de lancement, 3 premiers clients) puis 1 800 € (tarif de croisière). Inclut charte narrative courte, page « Histoire », un format ancré dans le lieu.",
+    "- Autres add-ons (direction artistique/moodboard dédié, supports imprimés écrits « en diégèse » — invitations, menus, programme —, brief scénaristique pour les prestataires du lieu, supervision narrative le jour J) : 400 à 800 € selon complexité, à l'unité ou combinés.",
+    "- Accompagnement annuel « La Saison » (upsell proposé après un premier événement réussi, jamais en entrée de tunnel) : 1 800 à 2 200 €/mois, engagement 6 mois minimum.",
+    "",
+    "⚠ Tarifs à confirmer/ajuster par Solenne au fil de l'activité — base de départ issue des notes stratégiques Kleiomné."
+  ].join("\n");
+
+  var SEED_QUESTIONNAIRE = [
+    "QUESTIONNAIRE DÉCOUVERTE KLEIOMNÉ — tronc commun + branches",
+    "",
+    "Objectif : qualifier le lieu et orienter vers un format d'événement et une formule (Spectacle ou Immersion totale). Si une réponse est déjà connue grâce à la recherche (site officiel, réseaux sociaux, Gmail...), la reformuler en confirmation plutôt que la reposer à l'aveugle.",
+    "",
+    "TRONC COMMUN (tout lieu) :",
+    "1. Qui décide pour ce lieu ? (propriétaire nommé / gérant-commercial / structure ou groupe / collectivité-fondation)",
+    "2. Le lieu a-t-il déjà organisé des événements thématiques ou immersifs ? Lesquels, avec quel retour ?",
+    "3. Capacité d'accueil (nombre de personnes max, intérieur et extérieur)",
+    "4. Espaces mobilisables pour un événement (salle, jardin, cour, cave...) et contraintes (accès, horaires, sécurité incendie, voisinage)",
+    "5. Saisonnalité du lieu : période creuse à animer en priorité ? période pleine à éviter ?",
+    "6. Budget envisagé, ou fourchette",
+    "7. Objectif principal recherché (remplir un créneau creux, se différencier, image de marque, fidéliser un public, tester avant un accompagnement annuel...)",
+    "8. Y a-t-il une histoire, une légende ou des personnages liés au lieu ? (matière potentielle pour l'add-on storytelling)",
+    "9. Qui signe, et sous quel délai ? Un budget est-il déjà voté ?",
+    "",
+    "BRANCHE PROFIL DE LIEU (selon le type identifié) :",
+    "- Château / domaine patrimonial : monument classé ou inscrit ? contraintes des Architectes des Bâtiments de France ? propriétaire résident sur place ? statut privé / public / fondation ?",
+    "- Restaurant / bar à thème : identité visuelle ou thématique déjà en place ? profil de la clientèle actuelle (habituée, touristique, événementielle) ? jours/heures disponibles pour un événement dédié ?",
+    "- Lieu producteur (domaine viticole, distillerie...) : propose-t-il déjà des visites ou ateliers ? volonté de mettre en scène le savoir-faire/la production dans l'expérience ?",
+    "",
+    "QUESTION TRANSVERSALE CLÉ (aiguillage formule) :",
+    "« Préférez-vous un format accueillant un grand nombre de participants de façon plus spectaculaire (formule Spectacle), ou une expérience resserrée où chaque participant a un rôle actif (formule Immersion totale) ? »",
+    "",
+    "BRANCHES PAR CATÉGORIE (ne poser que les questions des catégories envisagées) :",
+    "",
+    "Visite théâtralisée :",
+    "- Parcours possible dans le lieu (itinéraire, temps de déplacement entre les points) ?",
+    "- Combien de « stations »/pièces mobilisables pour scander la visite ?",
+    "- Le lieu a-t-il déjà des guides ou comédiens formés pouvant être mobilisés ?",
+    "",
+    "Nocturne / Visite aux chandelles :",
+    "- L'éclairage électrique peut-il être coupé la nuit ?",
+    "- Usage de bougies/flammes autorisé (contraintes sécurité incendie) ?",
+    "- Accès nocturne au lieu autorisé ?",
+    "",
+    "Dîner immersif :",
+    "- Cuisine/traiteur sur place, ou prestataire à faire venir ?",
+    "- Capacité de la salle à manger scénarisable ?",
+    "- Contraintes de menu/allergènes à anticiper ?",
+    "",
+    "Murder party :",
+    "- Salons ou pièces cloisonnées disponibles pour des sous-groupes ?",
+    "- Matériel d'enquête envisageable (indices physiques, accessoires) ?",
+    "",
+    "Bal fantasy :",
+    "- Grande salle de bal ou équivalent disponible ?",
+    "- Sonorisation déjà en place ?",
+    "- Dress code ou tenue déjà souhaité(e) par le lieu ?",
+    "",
+    "Enquête immersive / jeu de piste narratif :",
+    "- Superficie parcourable, présence d'un extérieur (jardin, parc) ?",
+    "- Niveau de mobilité requis pour les participants (accessibilité PMR à anticiper) ?",
+    "",
+    "Événement ponctuel (Halloween, Pâques, Noël) :",
+    "- Le lieu a-t-il déjà une tradition sur cette période ?",
+    "- Contraintes de dates fixes (jours fériés, autres événements déjà prévus) ?",
+    "",
+    "⚠ Questionnaire de départ à ajuster par Solenne — les questions déjà répondues par la recherche automatique sont reformulées en confirmation par le générateur plutôt que reposées."
+  ].join("\n");
+
   var SEED = [
     { venue:"La Roseraie de Provins", email:"laroseraiedeprovins@gmail.com", segment:"Jardin patrimonial", date:"2026-09-14", status:"Envoyé", note:"", opensCount:0, opensLast:null },
     { venue:"La Plume de Phénix", email:"laplumedephenix@gmail.com", segment:"Bar à thème", date:"2026-09-14", status:"Ouvert / cliqué", note:"", opensCount:2, opensLast:"2026-09-14T00:00:00.000Z" },
@@ -425,7 +636,11 @@
    "view-prospects","view-analytics","an-kpis","an-status-bars","an-segment-bars","an-top-engaged","an-relance-list","an-arg-bars",
    "detail-overlay","detail-modal","detail-body","detail-close",
    "export-overlay","export-modal","export-body","export-close","btn-export",
-   "relance-overlay","relance-modal","relance-body","relance-close"
+   "relance-overlay","relance-modal","relance-body","relance-close",
+   "view-tunnels","view-connaissance","venue-search","btn-add-venue","venue-add-panel",
+   "v-name","v-email","v-phone","v-cats","btn-cancel-venue","btn-save-venue",
+   "venue-count","venue-cards","venue-overlay","venue-modal","venue-body","venue-close",
+   "kb-process","kb-questionnaire","btn-save-kb","kb-save-status"
   ].forEach(function(id){ els[id.replace(/-([a-z])/g, function(_,c){return c.toUpperCase();})] = document.getElementById(id); });
 
   var state = {
@@ -439,7 +654,13 @@
     openDetailId: null,
     analyzing: null,
     openRelanceId: null,
-    relanceGenerating: null
+    relanceGenerating: null,
+    venues: [],
+    venueSearch: "",
+    kb: { processCommercial: SEED_PROCESS, questionnaireBase: SEED_QUESTIONNAIRE },
+    openVenueId: null,
+    venueGenerating: null,
+    venueGmailSearching: null
   };
 
   function computeArgTagStats(){
@@ -474,6 +695,7 @@
 
   var capSample; // undefined = still resolving, null = unavailable, function = ready
   var capDownloads; // same tri-state
+  var capMcp; // same tri-state — object = ready (mcp namespace), null = unavailable
   var ANALYSIS_ERROR_MSG = {
     not_granted: "Analyse désactivée pour ce compte — activable dans les réglages de partage de l'artifact.",
     sampling_disabled: "Claude n'est pas disponible pour ce compte.",
@@ -487,7 +709,8 @@
     cancelled: "Analyse interrompue.",
     invalid_request: "Une erreur est survenue — réessayez.",
     prompt_too_large: "Trop de contenu pour cette analyse — réessayez.",
-    upstream_error: "Erreur temporaire — réessayez dans un instant."
+    upstream_error: "Erreur temporaire — réessayez dans un instant.",
+    invalid_json: "Réponse générée non exploitable — réessayez."
   };
 
   // ---------- relance due (7 jours ouvrés sans engagement, 5 après ouverture/clic) ----------
@@ -522,6 +745,8 @@
   // ---------- storage adapter: db capability, falling back to localStorage ----------
   var store = { mode: "connecting", db: null };
   var LOCAL_KEY = "kleiomne-crm-contacts-v1";
+  var LOCAL_KEY_VENUES = "kleiomne-crm-venues-v1";
+  var LOCAL_KEY_KB = "kleiomne-crm-kb-v1";
 
   function uid(){ return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
 
@@ -538,6 +763,22 @@
     }catch(e){ return {}; }
   }
   function localSave(obj){ try{ localStorage.setItem(LOCAL_KEY, JSON.stringify(obj)); }catch(e){} }
+
+  function localLoadVenues(){
+    try{
+      var raw = localStorage.getItem(LOCAL_KEY_VENUES);
+      return raw ? JSON.parse(raw) : {};
+    }catch(e){ return {}; }
+  }
+  function localSaveVenues(obj){ try{ localStorage.setItem(LOCAL_KEY_VENUES, JSON.stringify(obj)); }catch(e){} }
+
+  function localLoadKb(){
+    try{
+      var raw = localStorage.getItem(LOCAL_KEY_KB);
+      return raw ? JSON.parse(raw) : null;
+    }catch(e){ return null; }
+  }
+  function localSaveKb(obj){ try{ localStorage.setItem(LOCAL_KEY_KB, JSON.stringify(obj)); }catch(e){} }
 
   function setSyncStatus(mode){
     if(mode === "db"){
@@ -557,6 +798,10 @@
     setSyncStatus("local");
     var data = localLoad();
     state.contacts = Object.keys(data).map(function(id){ return data[id]; });
+    var vdata = localLoadVenues();
+    state.venues = Object.keys(vdata).map(function(id){ return vdata[id]; });
+    var kbData = localLoadKb();
+    if(kbData) state.kb = kbData; else localSaveKb(state.kb);
     renderAll();
     store.localAdd = function(payload){
       var data = localLoad();
@@ -581,6 +826,35 @@
       state.contacts = Object.keys(data).map(function(k){ return data[k]; });
       renderAll();
     };
+    store.localAddVenue = function(payload){
+      var data = localLoadVenues();
+      var id = uid();
+      data[id] = Object.assign({id:id}, payload);
+      localSaveVenues(data);
+      state.venues = Object.keys(data).map(function(k){ return data[k]; });
+      renderAll();
+      return id;
+    };
+    store.localUpdateVenue = function(id, payload){
+      var data = localLoadVenues();
+      if(!data[id]) return;
+      data[id] = Object.assign({}, data[id], payload);
+      localSaveVenues(data);
+      state.venues = Object.keys(data).map(function(k){ return data[k]; });
+      renderAll();
+    };
+    store.localRemoveVenue = function(id){
+      var data = localLoadVenues();
+      delete data[id];
+      localSaveVenues(data);
+      state.venues = Object.keys(data).map(function(k){ return data[k]; });
+      renderAll();
+    };
+    store.localSaveKb = function(payload){
+      state.kb = Object.assign({}, state.kb, payload);
+      localSaveKb(state.kb);
+      renderAll();
+    };
   }
 
   function startDbMode(db){
@@ -595,6 +869,20 @@
       console.warn("db error, falling back to local storage", err);
       startLocalMode();
     });
+    var vcol = db.collection("venues");
+    vcol.onSnapshot(function(snap){
+      state.venues = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+      renderAll();
+    }, function(err){ console.warn("db venues error", err); });
+    db.doc("meta/kb").onSnapshot(function(doc){
+      var data = doc && doc.exists ? doc.data() : null;
+      if(data && (data.processCommercial || data.questionnaireBase)){
+        state.kb = { processCommercial: data.processCommercial || SEED_PROCESS, questionnaireBase: data.questionnaireBase || SEED_QUESTIONNAIRE };
+      } else {
+        db.doc("meta/kb").set(state.kb).catch(function(){});
+      }
+      renderAll();
+    }, function(err){ console.warn("db kb error", err); });
   }
 
   function addContact(payload){
@@ -611,6 +899,31 @@
   function removeContact(id){
     if(store.mode === "db"){ store.db.collection("contacts").doc(id).delete().catch(function(){}); }
     else { store.localRemove(id); }
+  }
+
+  function addVenue(payload, cb){
+    payload.createdAt = new Date().toISOString();
+    payload.updatedAt = payload.createdAt;
+    if(store.mode === "db"){
+      store.db.collection("venues").add(payload).then(function(ref){ if(cb) cb(ref.id); }).catch(function(){});
+    } else {
+      var id = store.localAddVenue(payload);
+      if(cb) cb(id);
+    }
+  }
+  function updateVenue(id, payload){
+    payload.updatedAt = new Date().toISOString();
+    if(store.mode === "db"){ store.db.collection("venues").doc(id).update(payload).catch(function(){}); }
+    else { store.localUpdateVenue(id, payload); }
+  }
+  function removeVenue(id){
+    if(store.mode === "db"){ store.db.collection("venues").doc(id).delete().catch(function(){}); }
+    else { store.localRemoveVenue(id); }
+  }
+  function saveKb(payload){
+    state.kb = Object.assign({}, state.kb, payload);
+    if(store.mode === "db"){ store.db.doc("meta/kb").update(payload).catch(function(){ store.db.doc("meta/kb").set(state.kb).catch(function(){}); }); }
+    else { store.localSaveKb(payload); }
   }
 
   // ---------- rendering ----------
@@ -780,6 +1093,12 @@
     if(state.openRelanceId && state.relanceGenerating !== state.openRelanceId){
       var relStillExists = state.contacts.some(function(c){ return c.id === state.openRelanceId; });
       if(relStillExists) renderRelanceModal(); else closeRelanceDraft();
+    }
+    if(els.venueCards) renderVenuesList();
+    if(state.tab === "connaissance") renderConnaissance();
+    if(state.openVenueId && state.venueGenerating !== state.openVenueId && state.venueGmailSearching !== state.openVenueId){
+      var venueStillExists = state.venues.some(function(x){ return x.id === state.openVenueId; });
+      if(venueStillExists) renderVenueDetailModal(); else closeVenueDetail();
     }
   }
 
@@ -1136,6 +1455,422 @@
   els.exportOverlay.addEventListener("click", function(e){ if(e.target === els.exportOverlay) closeExport(); });
   document.addEventListener("keydown", function(e){ if(e.key === "Escape" && !els.exportOverlay.hidden) closeExport(); });
 
+  // ---------- venues / tunnel generator ----------
+  function venueCatLabel(v){ return (v.categories||[]).map(function(k){ return CATEGORY_LABEL[k]||k; }).join(", ") || "—"; }
+
+  function catCheckboxesHTML(checked){
+    checked = checked || [];
+    return CATEGORIES.map(function(c){
+      var on = checked.indexOf(c.key) !== -1;
+      return '<label class="tag-check'+(on?' on':'')+'"><input type="checkbox" value="'+esc(c.key)+'"'+(on?' checked':'')+'>'+esc(c.label)+'</label>';
+    }).join("");
+  }
+  function wireCatCheckboxes(host, onChange){
+    Array.prototype.forEach.call(host.querySelectorAll("input"), function(cb){
+      cb.addEventListener("change", function(){
+        cb.closest(".tag-check").classList.toggle("on", cb.checked);
+        if(onChange) onChange(Array.prototype.filter.call(host.querySelectorAll("input"), function(x){ return x.checked; }).map(function(x){ return x.value; }));
+      });
+    });
+  }
+
+  function openAddVenuePanel(){
+    els.vName.value=""; els.vEmail.value=""; els.vPhone.value="";
+    els.vCats.innerHTML = catCheckboxesHTML([]);
+    wireCatCheckboxes(els.vCats, null);
+    els.venueAddPanel.hidden = false;
+    els.vName.focus();
+  }
+  els.btnAddVenue.addEventListener("click", openAddVenuePanel);
+  els.btnCancelVenue.addEventListener("click", function(){ els.venueAddPanel.hidden = true; });
+  els.btnSaveVenue.addEventListener("click", function(){
+    if(!els.vName.value.trim()){ els.vName.focus(); return; }
+    var cats = Array.prototype.filter.call(els.vCats.querySelectorAll("input"), function(cb){ return cb.checked; }).map(function(cb){ return cb.value; });
+    addVenue({
+      name: els.vName.value.trim(),
+      contactEmail: els.vEmail.value.trim(),
+      contactPhone: els.vPhone.value.trim(),
+      categories: cats,
+      formule: "",
+      status: "Brouillon",
+      gmailSummary: "",
+      researchNotes: "",
+      tunnel: [],
+      questionnaire: []
+    }, function(id){
+      els.venueAddPanel.hidden = true;
+      if(id) openVenueDetail(id);
+    });
+  });
+
+  els.venueSearch.addEventListener("input", function(){ state.venueSearch = els.venueSearch.value; renderVenuesList(); });
+
+  function visibleVenues(){
+    var q = state.venueSearch.trim().toLowerCase();
+    var list = state.venues.filter(function(v){
+      if(!q) return true;
+      return [v.name, v.contactEmail, v.contactPhone, venueCatLabel(v)].join(" ").toLowerCase().indexOf(q) !== -1;
+    });
+    list.sort(function(a,b){ return (b.updatedAt||"").localeCompare(a.updatedAt||""); });
+    return list;
+  }
+
+  function venueCardHTML(v){
+    var color = VENUE_STATUS_COLOR[v.status] || "var(--gold)";
+    return (
+      '<div class="card venue-card" data-id="'+esc(v.id)+'" style="--card-color:'+color+'; cursor:pointer;">'+
+        '<div><div class="venue">'+esc(v.name||"(sans nom)")+'</div>'+
+          '<div class="email">'+esc(v.contactEmail||v.contactPhone||"")+'</div></div>'+
+        '<div class="venue-cats">'+esc(venueCatLabel(v))+'</div>'+
+        '<div class="field-mini"><label>Statut</label><div class="date-val" style="color:'+color+';">'+esc(v.status||"Brouillon")+'</div></div>'+
+        '<div class="card-actions"><button class="ghost" data-action="delete-venue">Supprimer</button></div>'+
+      '</div>'
+    );
+  }
+
+  function renderVenuesList(){
+    var list = visibleVenues();
+    els.venueCount.textContent = list.length + " / " + state.venues.length + " lieu" + (state.venues.length>1?"x":"");
+    if(!list.length){
+      els.venueCards.innerHTML = '<div class="empty-state">Aucun lieu pour le moment.<br><b>Cliquez « + Nouveau lieu » pour démarrer un tunnel.</b></div>';
+      return;
+    }
+    els.venueCards.innerHTML = list.map(venueCardHTML).join("");
+    Array.prototype.forEach.call(els.venueCards.querySelectorAll("[data-id]"), function(cardEl){
+      var id = cardEl.getAttribute("data-id");
+      cardEl.addEventListener("click", function(){ openVenueDetail(id); });
+      var delBtn = cardEl.querySelector('[data-action="delete-venue"]');
+      if(delBtn) delBtn.addEventListener("click", function(e){
+        e.stopPropagation();
+        var vv = state.venues.find(function(x){ return x.id === id; });
+        if(confirm('Supprimer la fiche "'+((vv&&vv.name)||"")+'" ? Cette action est définitive.')){
+          removeVenue(id);
+        }
+      });
+    });
+  }
+
+  // ---------- venue detail: research bridge, Gmail, tunnel generation ----------
+  function buildResearchBriefText(v){
+    var lines = [];
+    lines.push("Je prépare un tunnel de prospection Kleiomné pour un lieu. Peux-tu faire une recherche pour moi et me renvoyer une réponse structurée que je vais recoller dans mon outil ?");
+    lines.push("");
+    lines.push("Lieu : " + (v.name || "(nom non renseigné)"));
+    if(v.contactEmail) lines.push("Contact connu : " + v.contactEmail);
+    if(v.contactPhone) lines.push("Téléphone connu : " + v.contactPhone);
+    if(v.categories && v.categories.length) lines.push("Catégorie(s) d'événement envisagée(s) : " + v.categories.map(function(k){ return CATEGORY_LABEL[k]||k; }).join(", "));
+    lines.push("");
+    lines.push("Merci de :");
+    lines.push("1. Chercher sur le web : histoire du lieu, site officiel, réseaux sociaux, offre événementielle déjà en place, indices sur le décisionnaire (propriétaire nommé, gérant/commercial, ou structure/groupe).");
+    lines.push("2. Chercher dans nos conversations passées si ce lieu a déjà été évoqué, pitché ou écarté — et pourquoi, le cas échéant (par exemple un critère déjà identifié comme rédhibitoire sur un lieu similaire).");
+    lines.push("");
+    lines.push("Réponds en français, sous forme de notes synthétiques classées par thème (histoire, décisionnaire probable, offre existante, présence en ligne, éléments trouvés dans nos échanges passés). Je recolle ta réponse telle quelle dans mon outil, donc pas besoin de mise en forme particulière.");
+    return lines.join("\n");
+  }
+
+  var CATEGORY_KEYS_LIST = CATEGORIES.map(function(c){ return c.key; }).join(", ");
+
+  function buildTunnelPrompt(v){
+    var lines = [];
+    lines.push("Tu génères un tunnel de prospection sur mesure et un questionnaire découverte adapté pour Solenne, fondatrice de Kleiomné, une agence qui conçoit des expériences narratives immersives pour des lieux à forte identité patrimoniale ou thématique.");
+    lines.push("");
+    lines.push("Base-toi strictement sur les deux documents de référence ci-dessous (process commercial et questionnaire découverte) : reprends leurs étapes, délais et tarifs plutôt que d'en inventer de nouveaux, et adapte-les au lieu précis décrit plus bas (ne garde que les étapes et questions pertinentes pour ce lieu).");
+    lines.push("");
+    lines.push("=== PROCESS COMMERCIAL (référence) ===");
+    lines.push(state.kb.processCommercial || SEED_PROCESS);
+    lines.push("");
+    lines.push("=== QUESTIONNAIRE DÉCOUVERTE (référence) ===");
+    lines.push(state.kb.questionnaireBase || SEED_QUESTIONNAIRE);
+    lines.push("");
+    lines.push("=== LE LIEU ===");
+    lines.push("Nom : " + (v.name || "(non renseigné)"));
+    lines.push("Contact : " + (v.contactEmail || v.contactPhone || "non renseigné"));
+    lines.push("Catégorie(s) envisagée(s) : " + ((v.categories&&v.categories.length) ? v.categories.map(function(k){ return CATEGORY_LABEL[k]||k; }).join(", ") : "aucune fournie — à suggérer toi-même à partir des informations ci-dessous"));
+    lines.push("Catégories valides (utilise exactement ces clés dans \"suggestedCategories\") : " + CATEGORY_KEYS_LIST);
+    if(v.gmailSummary){ lines.push(""); lines.push("Historique Gmail avec ce contact :"); lines.push(v.gmailSummary.slice(0,3000)); }
+    if(v.researchNotes){ lines.push(""); lines.push("Informations recueillies (recherche web + conversations passées) :"); lines.push(v.researchNotes.slice(0,6000)); }
+    lines.push("");
+    lines.push("Réponds uniquement avec un objet JSON de cette forme exacte, sans aucun texte avant ni après :");
+    lines.push('{"suggestedCategories": ["..."], "tunnel": [{"step": "...", "timing": "...", "budget": "...", "notes": "..."}], "questionnaire": [{"section": "...", "questions": ["...", "..."]}]}');
+    lines.push("");
+    lines.push("Consignes : le tunnel ne doit contenir que les étapes pertinentes pour ce lieu précis (pas forcément les 13 étapes génériques du process), avec un timing estimé pour chacune et, si pertinent à ce stade, une fourchette budgétaire (laisser \"budget\" vide si non pertinent à cette étape). Le questionnaire doit reprendre le tronc commun, la branche profil de lieu adaptée, et les branches des catégories envisagées ; si une information est déjà connue via l'historique Gmail ou les informations recueillies, reformule la question correspondante en confirmation plutôt que de la reposer à l'aveugle. \"suggestedCategories\" ne doit contenir des valeurs que si aucune catégorie n'a été fournie par Solenne ci-dessus : sinon renvoie un tableau vide.");
+    return lines.join("\n");
+  }
+
+  function formatGmailSummary(result){
+    var threads = (result && result.threads) || [];
+    if(!threads.length) return "Aucun échange Gmail trouvé pour ce contact.";
+    var lines = [];
+    threads.forEach(function(t){
+      (t.messages||[]).forEach(function(m){
+        var dir = (m.labelIds||[]).indexOf("SENT") !== -1 ? "Envoyé" : "Reçu";
+        lines.push("- [" + dir + "] " + String(m.date||"").slice(0,10) + " — " + (m.subject||"(sans objet)") + " — " + String(m.snippet||"").slice(0,160));
+      });
+    });
+    return lines.join("\n") || "Aucun message dans les échanges trouvés.";
+  }
+
+  function gmailSearchForVenue(id){
+    if(!capMcp) return;
+    state.venueGmailSearching = id;
+    renderVenueDetailModal();
+    var v = state.venues.find(function(x){ return x.id === id; });
+    var q = v.contactEmail ? v.contactEmail : (v.name || "");
+    if(!q) { state.venueGmailSearching = null; renderVenueDetailModal(); return; }
+    capMcp.server("Gmail").then(function(gmail){
+      return gmail.search_threads({ query: q, pageSize: 10 });
+    }).then(function(result){
+      state.venueGmailSearching = null;
+      updateVenue(id, { gmailSummary: formatGmailSummary(result) });
+    }).catch(function(e){
+      state.venueGmailSearching = null;
+      renderVenueDetailModal();
+      var el = document.getElementById("gmail-status");
+      var msg;
+      switch(e && e.code){
+        case "needs_reauth": msg = "Connecteur Gmail à reconnecter — Claude.ai → Réglages → Connecteurs."; break;
+        case "server_not_connected": msg = "Connecteur Gmail non ajouté — à ajouter dans Claude.ai → Réglages → Connecteurs."; break;
+        case "not_granted": case "capability_disabled": case "capability_removed": msg = "Recherche Gmail indisponible dans cette vue."; break;
+        default: msg = "La recherche Gmail a échoué — réessayez.";
+      }
+      if(el) el.textContent = msg;
+    });
+  }
+
+  function generateVenueTunnel(id, forceRefresh){
+    if(typeof capSample !== "function"){
+      var msg = capSample === undefined
+        ? "Vérification de la disponibilité de la génération… réessayez dans un instant."
+        : "Génération indisponible dans cette vue (ouvrez l'outil publié depuis Claude pour l'utiliser).";
+      var target = document.getElementById("venue-gen-status") || document.getElementById("btn-venue-gen");
+      if(target) target.outerHTML = '<div class="analysis-status">'+esc(msg)+'</div>';
+      return;
+    }
+    state.venueGenerating = id;
+    renderVenueDetailModal();
+    var v = state.venues.find(function(x){ return x.id === id; });
+    capSample.json(buildTunnelPrompt(v), { modelTier: "default", cache: forceRefresh ? false : true }).then(function(data){
+      state.venueGenerating = null;
+      var patch = {
+        tunnel: Array.isArray(data && data.tunnel) ? data.tunnel : [],
+        questionnaire: Array.isArray(data && data.questionnaire) ? data.questionnaire : [],
+        status: "Tunnel généré"
+      };
+      if((!v.categories || !v.categories.length) && data && Array.isArray(data.suggestedCategories) && data.suggestedCategories.length){
+        patch.categories = data.suggestedCategories.filter(function(k){ return !!CATEGORY_LABEL[k]; });
+      }
+      updateVenue(id, patch);
+    }).catch(function(e){
+      state.venueGenerating = null;
+      renderVenueDetailModal();
+      var el = document.getElementById("venue-gen-status");
+      if(el) el.textContent = (ANALYSIS_ERROR_MSG[e && e.code] || "Une erreur est survenue — réessayez.") + (e && e.text ? " (réponse partielle reçue, non exploitable en l'état)" : "");
+    });
+  }
+
+  function tunnelStepsHTML(steps){
+    if(!steps || !steps.length) return '<div class="analysis-empty">Pas encore de tunnel généré.</div>';
+    return steps.map(function(s, i){
+      return '<div class="step-row" data-idx="'+i+'">'+
+        '<div class="step-head"><span class="step-num">Étape '+(i+1)+'</span>'+
+          '<input type="text" data-f="step" value="'+esc(s.step||"")+'" placeholder="Nom de l\'étape" style="flex:1;">'+
+          '<button class="row-remove" data-action="rm-step">Supprimer</button></div>'+
+        '<div class="step-grid">'+
+          '<div class="field"><label>Timing</label><input type="text" data-f="timing" value="'+esc(s.timing||"")+'" placeholder="ex. J+7 jours ouvrés"></div>'+
+          '<div class="field"><label>Budget</label><input type="text" data-f="budget" value="'+esc(s.budget||"")+'" placeholder="ex. 2 500–4 000 €"></div>'+
+        '</div>'+
+        '<textarea data-f="notes" placeholder="Notes">'+esc(s.notes||"")+'</textarea>'+
+      '</div>';
+    }).join("");
+  }
+
+  function questionnaireSectionsHTML(qs){
+    if(!qs || !qs.length) return '<div class="analysis-empty">Pas encore de questionnaire généré.</div>';
+    return qs.map(function(sec, si){
+      var qHTML = (sec.questions||[]).map(function(q, qi){
+        return '<div class="qsec-q-line" data-qidx="'+qi+'">'+
+          '<textarea data-f="question">'+esc(q)+'</textarea>'+
+          '<button class="row-remove" data-action="rm-question" title="Supprimer la question">✕</button></div>';
+      }).join("");
+      return '<div class="qsec-row" data-idx="'+si+'">'+
+        '<div class="qsec-head"><input type="text" data-f="section" value="'+esc(sec.section||"")+'" placeholder="Nom de la section" style="flex:1;">'+
+          '<button class="row-remove" data-action="rm-section">Supprimer la section</button></div>'+
+        '<div class="qsec-questions">'+qHTML+'</div>'+
+        '<div class="panel-actions" style="justify-content:flex-start; margin-top:8px;"><button class="ghost" data-action="add-question">+ Question</button></div>'+
+      '</div>';
+    }).join("");
+  }
+
+  function openVenueDetail(id){
+    state.openVenueId = id;
+    renderVenueDetailModal();
+    els.venueOverlay.hidden = false;
+  }
+  function closeVenueDetail(){
+    state.openVenueId = null;
+    state.venueGenerating = null;
+    state.venueGmailSearching = null;
+    els.venueOverlay.hidden = true;
+    els.venueBody.innerHTML = "";
+  }
+  els.venueClose.addEventListener("click", closeVenueDetail);
+  els.venueOverlay.addEventListener("click", function(e){ if(e.target === els.venueOverlay) closeVenueDetail(); });
+  document.addEventListener("keydown", function(e){ if(e.key === "Escape" && !els.venueOverlay.hidden) closeVenueDetail(); });
+
+  function renderVenueDetailModal(){
+    var v = state.venues.find(function(x){ return x.id === state.openVenueId; });
+    if(!v) return;
+    var statusOptions = VENUE_STATUSES.map(function(s){
+      return '<option value="'+esc(s.key)+'"'+(s.key===v.status?" selected":"")+'>'+esc(s.key)+'</option>';
+    }).join("");
+    var formuleOptions = '<option value="">—</option>' + FORMULES.map(function(f){
+      return '<option value="'+esc(f.key)+'"'+(f.key===v.formule?" selected":"")+'>'+esc(f.label)+'</option>';
+    }).join("");
+
+    var gmailBlock;
+    if(!capMcp){
+      gmailBlock = '<div class="research-status">Recherche Gmail indisponible dans cette vue.</div>';
+    } else if(state.venueGmailSearching === v.id){
+      gmailBlock = '<div class="research-status">Recherche en cours…</div>';
+    } else {
+      gmailBlock = '<div class="panel-actions" style="justify-content:flex-start;"><button class="gold" id="btn-gmail-search">Rechercher sur Gmail</button></div>'+
+        '<div class="research-status" id="gmail-status"></div>';
+    }
+
+    var genBlock;
+    if(state.venueGenerating === v.id){
+      genBlock = '<div class="analysis-status" id="venue-gen-status">Génération en cours…</div>';
+    } else {
+      genBlock = '<div class="panel-actions" style="justify-content:flex-start; gap:10px;">'+
+        '<button class="gold" id="btn-venue-gen">'+(v.tunnel&&v.tunnel.length?'Régénérer le tunnel':'Générer le tunnel + questionnaire')+'</button></div>'+
+        '<div class="analysis-status" id="venue-gen-status"></div>';
+    }
+
+    els.venueBody.innerHTML =
+      '<h2><input type="text" id="ven-name" value="'+esc(v.name||"")+'" placeholder="Nom du lieu" style="width:100%; font-family:\'Cinzel\',serif; font-size:20px; background:transparent; border:none; padding:0; color:var(--ivory);"></h2>'+
+      '<div class="m-grid">'+
+        '<div class="m-field"><label>Email de contact</label><input type="email" id="ven-email" value="'+esc(v.contactEmail||"")+'"></div>'+
+        '<div class="m-field"><label>Téléphone</label><input type="text" id="ven-phone" value="'+esc(v.contactPhone||"")+'"></div>'+
+        '<div class="m-field"><label>Statut</label><select id="ven-status" class="status-select">'+statusOptions+'</select></div>'+
+        '<div class="m-field"><label>Formule</label><select id="ven-formule">'+formuleOptions+'</select></div>'+
+      '</div>'+
+      '<div class="m-field"><label>Catégorie(s) envisagée(s)</label><div class="tag-check-group" id="ven-cats">'+catCheckboxesHTML(v.categories||[])+'</div></div>'+
+      '<div class="analysis-box"><div class="a-head"><h3>Recherche</h3></div>'+
+        '<div class="m-field"><label>Brief à coller dans une conversation Claude (web + conversations passées)</label>'+
+          '<textarea id="venue-brief-text" class="kb-textarea" readonly>'+esc(buildResearchBriefText(v))+'</textarea></div>'+
+        '<div class="panel-actions" style="justify-content:flex-start;"><button class="primary" id="btn-brief-copy">Copier le brief</button></div>'+
+        '<div class="research-status" id="brief-copy-status"></div>'+
+        '<div class="m-field" style="margin-top:14px;"><label>Informations recueillies (collées depuis le chat)</label>'+
+          '<textarea id="ven-research" class="kb-textarea" placeholder="Collez ici la réponse de Claude…">'+esc(v.researchNotes||"")+'</textarea></div>'+
+        '<div class="m-field" style="margin-top:14px;"><label>Historique Gmail (auto, éditable)</label>'+
+          '<textarea id="ven-gmail" class="kb-textarea" placeholder="—">'+esc(v.gmailSummary||"")+'</textarea></div>'+
+        gmailBlock+
+      '</div>'+
+      '<div class="analysis-box"><div class="a-head"><h3>Tunnel de prospection</h3></div>'+
+        genBlock+
+        '<div id="venue-tunnel-steps" style="margin-top:12px;">'+tunnelStepsHTML(v.tunnel)+'</div>'+
+        '<div class="panel-actions" style="justify-content:flex-start;"><button class="ghost" id="btn-add-step">+ Étape</button></div>'+
+      '</div>'+
+      '<div class="analysis-box"><div class="a-head"><h3>Questionnaire découverte</h3></div>'+
+        '<div id="venue-questionnaire" style="margin-top:12px;">'+questionnaireSectionsHTML(v.questionnaire)+'</div>'+
+        '<div class="panel-actions" style="justify-content:flex-start;"><button class="ghost" id="btn-add-section">+ Section</button></div>'+
+      '</div>';
+
+    document.getElementById("ven-name").addEventListener("blur", function(e){ updateVenue(v.id, { name: e.target.value.trim() }); });
+    document.getElementById("ven-email").addEventListener("blur", function(e){ updateVenue(v.id, { contactEmail: e.target.value.trim() }); });
+    document.getElementById("ven-phone").addEventListener("blur", function(e){ updateVenue(v.id, { contactPhone: e.target.value.trim() }); });
+    document.getElementById("ven-status").addEventListener("change", function(e){ updateVenue(v.id, { status: e.target.value }); });
+    document.getElementById("ven-formule").addEventListener("change", function(e){ updateVenue(v.id, { formule: e.target.value }); });
+    document.getElementById("ven-research").addEventListener("blur", function(e){ updateVenue(v.id, { researchNotes: e.target.value }); });
+    document.getElementById("ven-gmail").addEventListener("blur", function(e){ updateVenue(v.id, { gmailSummary: e.target.value }); });
+
+    wireCatCheckboxes(document.getElementById("ven-cats"), function(picked){ updateVenue(v.id, { categories: picked }); });
+
+    var briefCopyBtn = document.getElementById("btn-brief-copy");
+    if(briefCopyBtn) briefCopyBtn.addEventListener("click", function(){
+      var ta = document.getElementById("venue-brief-text");
+      tryCopyText(ta.value, document.getElementById("brief-copy-status"), ta);
+    });
+
+    var gmailBtn = document.getElementById("btn-gmail-search");
+    if(gmailBtn) gmailBtn.addEventListener("click", function(){ gmailSearchForVenue(v.id); });
+
+    var genBtn = document.getElementById("btn-venue-gen");
+    if(genBtn) genBtn.addEventListener("click", function(){ generateVenueTunnel(v.id, !!(v.tunnel&&v.tunnel.length)); });
+
+    // tunnel step editing
+    function persistTunnel(){ updateVenue(v.id, { tunnel: v.tunnel }); }
+    Array.prototype.forEach.call(document.querySelectorAll("#venue-tunnel-steps .step-row"), function(row){
+      var idx = parseInt(row.getAttribute("data-idx"), 10);
+      Array.prototype.forEach.call(row.querySelectorAll("[data-f]"), function(field){
+        field.addEventListener("blur", function(){
+          v.tunnel[idx][field.getAttribute("data-f")] = field.value;
+          persistTunnel();
+        });
+      });
+      var rm = row.querySelector('[data-action="rm-step"]');
+      if(rm) rm.addEventListener("click", function(){
+        v.tunnel.splice(idx, 1);
+        persistTunnel();
+        renderVenueDetailModal();
+      });
+    });
+    document.getElementById("btn-add-step").addEventListener("click", function(){
+      v.tunnel = v.tunnel || [];
+      v.tunnel.push({ step: "", timing: "", budget: "", notes: "" });
+      persistTunnel();
+      renderVenueDetailModal();
+    });
+
+    // questionnaire editing
+    function persistQuestionnaire(){ updateVenue(v.id, { questionnaire: v.questionnaire }); }
+    Array.prototype.forEach.call(document.querySelectorAll("#venue-questionnaire .qsec-row"), function(sec){
+      var si = parseInt(sec.getAttribute("data-idx"), 10);
+      var sectionInput = sec.querySelector('[data-f="section"]');
+      sectionInput.addEventListener("blur", function(){ v.questionnaire[si].section = sectionInput.value; persistQuestionnaire(); });
+      Array.prototype.forEach.call(sec.querySelectorAll(".qsec-q-line"), function(qline){
+        var qi = parseInt(qline.getAttribute("data-qidx"), 10);
+        var qta = qline.querySelector('[data-f="question"]');
+        qta.addEventListener("blur", function(){ v.questionnaire[si].questions[qi] = qta.value; persistQuestionnaire(); });
+        var rmq = qline.querySelector('[data-action="rm-question"]');
+        rmq.addEventListener("click", function(){
+          v.questionnaire[si].questions.splice(qi, 1);
+          persistQuestionnaire();
+          renderVenueDetailModal();
+        });
+      });
+      var rmSec = sec.querySelector('[data-action="rm-section"]');
+      rmSec.addEventListener("click", function(){
+        v.questionnaire.splice(si, 1);
+        persistQuestionnaire();
+        renderVenueDetailModal();
+      });
+      var addQ = sec.querySelector('[data-action="add-question"]');
+      addQ.addEventListener("click", function(){
+        v.questionnaire[si].questions = v.questionnaire[si].questions || [];
+        v.questionnaire[si].questions.push("");
+        persistQuestionnaire();
+        renderVenueDetailModal();
+      });
+    });
+    document.getElementById("btn-add-section").addEventListener("click", function(){
+      v.questionnaire = v.questionnaire || [];
+      v.questionnaire.push({ section: "", questions: [""] });
+      persistQuestionnaire();
+      renderVenueDetailModal();
+    });
+  }
+
+  // ---------- knowledge base tab ----------
+  function renderConnaissance(){
+    els.kbProcess.value = state.kb.processCommercial || SEED_PROCESS;
+    els.kbQuestionnaire.value = state.kb.questionnaireBase || SEED_QUESTIONNAIRE;
+  }
+  els.btnSaveKb.addEventListener("click", function(){
+    saveKb({ processCommercial: els.kbProcess.value, questionnaireBase: els.kbQuestionnaire.value });
+    els.kbSaveStatus.textContent = "Enregistré — utilisé pour toutes les prochaines générations de tunnel.";
+  });
+
   // ---------- tabs ----------
   Array.prototype.forEach.call(document.querySelectorAll(".tab-btn"), function(btn){
     btn.addEventListener("click", function(){
@@ -1143,6 +1878,9 @@
       Array.prototype.forEach.call(document.querySelectorAll(".tab-btn"), function(b){ b.classList.toggle("active", b===btn); });
       els.viewProspects.hidden = state.tab !== "prospects";
       els.viewAnalytics.hidden = state.tab !== "analytics";
+      els.viewTunnels.hidden = state.tab !== "tunnels";
+      els.viewConnaissance.hidden = state.tab !== "connaissance";
+      if(state.tab === "connaissance") renderConnaissance();
     });
   });
 
@@ -1342,10 +2080,15 @@
       if(state.openDetailId && state.analyzing !== state.openDetailId) renderDetailModal();
     }).catch(function(){ capSample = null; });
     window.claude.use("downloads").then(function(d){ capDownloads = d || null; }).catch(function(){ capDownloads = null; });
+    window.claude.use("mcp").then(function(m){
+      capMcp = m || null;
+      if(state.openVenueId && state.venueGmailSearching !== state.openVenueId) renderVenueDetailModal();
+    }).catch(function(){ capMcp = null; });
   } else {
     startLocalMode();
     capSample = null;
     capDownloads = null;
+    capMcp = null;
   }
 })();
 </script>
