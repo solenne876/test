@@ -24,6 +24,7 @@
     --st-repondu: #8FAE8B;
     --st-sansreponse: #A86767;
     --st-identifier: #9C8FBF;
+    --st-ko: #6E655C;
     --shadow: 0 18px 40px -20px rgba(0,0,0,0.55);
     --radius: 10px;
   }
@@ -385,7 +386,8 @@
     { key: "Relancé", color: "var(--st-relance)" },
     { key: "Répondu", color: "var(--st-repondu)" },
     { key: "Sans réponse", color: "var(--st-sansreponse)" },
-    { key: "À identifier", color: "var(--st-identifier)" }
+    { key: "À identifier", color: "var(--st-identifier)" },
+    { key: "KO", color: "var(--st-ko)" }
   ];
   var STATUS_COLOR = {};
   STATUSES.forEach(function(s){ STATUS_COLOR[s.key] = s.color; });
@@ -508,7 +510,7 @@
   }
 
   function relanceInfo(c){
-    if(c.status === "Répondu") return { due:false, days:0, threshold:0 };
+    if(c.status === "Répondu" || c.status === "KO") return { due:false, days:0, threshold:0 };
     var ref = c.date || c.createdAt;
     if(c.lastRelanceDate && c.lastRelanceDate > ref) ref = c.lastRelanceDate;
     if(c.opensLast && c.opensLast > ref) ref = c.opensLast;
@@ -806,7 +808,7 @@
     }).join("");
     var opens = c.opensCount ? (c.opensCount+' ouverture'+(c.opensCount>1?'s':'')+' · dernière '+fmtDate(c.opensLast)+' ('+relLabel(c.opensLast)+')') : "Aucune ouverture enregistrée";
     var ri = relanceInfo(c);
-    var relanceText = c.status === "Répondu" ? "Répondu — pas de relance nécessaire" :
+    var relanceText = (c.status === "Répondu" || c.status === "KO") ? (c.status === "KO" ? "KO — pas de relance" : "Répondu — pas de relance nécessaire") :
       (ri.due ? ('Relance due — '+ri.days+' jours ouvrés écoulés (seuil '+ri.threshold+'j)') : (ri.days+' jour'+(ri.days>1?'s':'')+' ouvré'+(ri.days>1?'s':'')+' écoulé'+(ri.days>1?'s':'')+' (seuil '+ri.threshold+'j)'));
 
     var analysisHTML;
@@ -1083,7 +1085,7 @@
       lines.push("Premier contact : " + fmtDate(c.date));
       lines.push("Statut : " + c.status);
       lines.push("Ouvertures Mailsuite : " + (c.opensCount ? (c.opensCount + ", dernière " + fmtDate(c.opensLast)) : "aucune"));
-      lines.push("Relance : " + (c.status === "Répondu" ? "répondu, pas de relance" : (ri.days + "j ouvrés écoulés (seuil " + ri.threshold + "j)" + (ri.due ? " — DUE" : ""))));
+      lines.push("Relance : " + ((c.status === "Répondu" || c.status === "KO") ? (c.status === "KO" ? "KO, pas de relance" : "répondu, pas de relance") : (ri.days + "j ouvrés écoulés (seuil " + ri.threshold + "j)" + (ri.due ? " — DUE" : ""))));
       lines.push("Note : " + (c.note || "—"));
       lines.push("Arguments utilisés : " + ((c.argTags && c.argTags.length) ? c.argTags.map(function(k){ return ARG_TAG_LABEL[k] || k; }).join(", ") : "—"));
       lines.push("Analyse : " + (c.aiAnalysis ? c.aiAnalysis : "(non générée)"));
