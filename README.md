@@ -44,9 +44,20 @@ Sans ces variables, l'outil continue de fonctionner : la source Gmail est simple
 **Recherche dans les conversations Claude passées**
 Cette source n'est pas automatisable depuis un backend applicatif standard (elle n'existe que côté Claude.ai / Claude Code, pas via l'API publique). Elle reste **manuelle** : le champ « Notes issues de conversations Claude passées » dans la fiche du lieu (et à la création) permet à Solenne de coller ce qu'elle a trouvé — ces notes sont ensuite injectées dans le prompt de génération du tunnel comme les autres sources.
 
-### Déploiement
+### Sécurité de la surface interne
 
-Aucune authentification applicative n'a été mise en place pour la surface 1 (interface interne) dans cette V1 — le cahier des charges ne demandait pas de système de comptes, mais l'interface expose des données de prospection. **Restreignez l'accès au niveau de l'hébergement** (réseau privé, VPN, Basic Auth en amont, etc.) si l'outil est déployé sur un serveur accessible publiquement. La surface 2 (`/q/<slug>`), elle, est volontairement sans authentification (lien à usage prospect).
+Le cahier des charges ne demandait pas de système de comptes, mais l'interface interne expose des données de prospection : dès que l'outil est accessible sur une URL publique, protégez-la avec `INTERNAL_BASIC_AUTH_USER` / `INTERNAL_BASIC_AUTH_PASS` (voir `.env.example`) — l'outil demandera alors un identifiant/mot de passe avant d'afficher l'interface interne ou de répondre à l'API interne. Sans ces variables, l'accès reste ouvert (pratique en local). La surface 2 (`/q/<slug>`), elle, reste toujours sans authentification (lien à usage prospect).
+
+### Déploiement sur Render.com (gratuit)
+
+1. Sur [dashboard.render.com](https://dashboard.render.com), **New +** → **Web Service**, puis connectez le repo GitHub `solenne876/test`.
+2. Render détecte `render.yaml` à la racine et propose de pré-remplir la configuration (Root Directory `server`, build `npm install`, start `npm start`) — validez, ou configurez-le manuellement si l'import Blueprint n'est pas proposé.
+3. Dans **Environment**, renseignez au minimum `ANTHROPIC_API_KEY`. Ajoutez `INTERNAL_BASIC_AUTH_USER` / `INTERNAL_BASIC_AUTH_PASS` pour protéger l'interface interne (fortement recommandé), et les 3 variables `GMAIL_*` si vous avez configuré l'intégration Gmail.
+4. Déployez. L'interface interne est à la racine de l'URL Render (`https://<nom-du-service>.onrender.com`), et chaque lien questionnaire devient `https://<nom-du-service>.onrender.com/q/<slug>`.
+
+**Deux limites du plan gratuit à connaître :**
+- Le service se met en veille après ~15 minutes d'inactivité ; la première requête suivante prend 30-60 secondes le temps qu'il redémarre.
+- Le disque n'est **pas persistant** entre deux déploiements : à chaque mise à jour du code poussée sur GitHub, `server/data/kleiomne.sqlite` repart de zéro et l'historique des lieux est perdu. Pour l'éviter, ajoutez un disque payant (~1€/mois, section `disks` commentée dans `render.yaml`) dès que l'historique devient précieux.
 
 ### Statuts d'un lieu
 

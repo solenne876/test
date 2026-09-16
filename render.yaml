@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: kleiomne-prospection
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GMAIL_CLIENT_ID
+        sync: false
+      - key: GMAIL_CLIENT_SECRET
+        sync: false
+      - key: GMAIL_REFRESH_TOKEN
+        sync: false
+      - key: INTERNAL_BASIC_AUTH_USER
+        sync: false
+      - key: INTERNAL_BASIC_AUTH_PASS
+        sync: false
+    # Le plan gratuit n'inclut pas de disque persistant : server/data/kleiomne.sqlite
+    # est remis à zéro à chaque nouveau déploiement. Pour conserver l'historique
+    # des lieux entre deux mises à jour du code, ajoute un disque payant (~1€/mois) :
+    # disks:
+    #   - name: kleiomne-data
+    #     mountPath: /opt/render/project/src/server/data
+    #     sizeGB: 1
