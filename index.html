@@ -382,6 +382,7 @@
     <div class="toolbar">
       <div class="grow"><input type="text" id="venue-search" placeholder="Rechercher un lieu…"></div>
       <button id="btn-add-venue" class="primary">+ Nouveau lieu</button>
+      <button id="btn-export-venues">Exporter pour le chat</button>
     </div>
 
     <div class="panel" id="venue-add-panel" hidden>
@@ -637,7 +638,7 @@
    "detail-overlay","detail-modal","detail-body","detail-close",
    "export-overlay","export-modal","export-body","export-close","btn-export",
    "relance-overlay","relance-modal","relance-body","relance-close",
-   "view-tunnels","view-connaissance","venue-search","btn-add-venue","venue-add-panel",
+   "view-tunnels","view-connaissance","venue-search","btn-add-venue","btn-export-venues","venue-add-panel",
    "v-name","v-email","v-phone","v-cats","btn-cancel-venue","btn-save-venue",
    "venue-count","venue-cards","venue-overlay","venue-modal","venue-body","venue-close",
    "kb-process","kb-questionnaire","btn-save-kb","kb-save-status"
@@ -1860,6 +1861,91 @@
       renderVenueDetailModal();
     });
   }
+
+  // ---------- export venues/tunnels for chat ----------
+  function buildVenueExportText(){
+    var now = new Date();
+    var dtLong = new Intl.DateTimeFormat("fr-FR", { day:"numeric", month:"long", year:"numeric", hour:"2-digit", minute:"2-digit" }).format(now);
+    var list = state.venues.slice().sort(function(a,b){ return (a.name||"").localeCompare(b.name||"", "fr"); });
+
+    var lines = [];
+    lines.push("Kleiomné — export tunnels de prospection");
+    lines.push("Généré le " + dtLong);
+    lines.push("");
+    lines.push(list.length + " lieu" + (list.length>1?"x":"") + " suivi" + (list.length>1?"s":""));
+    lines.push("");
+
+    if(!list.length){ lines.push("(aucun lieu enregistré pour le moment)"); return lines.join("\n"); }
+
+    list.forEach(function(v){
+      lines.push("────────────────────");
+      lines.push(v.name || "(sans nom)");
+      lines.push("Contact : " + (v.contactEmail || v.contactPhone || "—"));
+      lines.push("Catégorie(s) : " + venueCatLabel(v));
+      lines.push("Formule : " + (FORMULE_LABEL[v.formule] || "—"));
+      lines.push("Statut : " + (v.status || "Brouillon"));
+      if(v.gmailSummary){ lines.push(""); lines.push("Historique Gmail :"); lines.push(v.gmailSummary); }
+      if(v.researchNotes){ lines.push(""); lines.push("Informations recueillies :"); lines.push(v.researchNotes); }
+      if(v.tunnel && v.tunnel.length){
+        lines.push("");
+        lines.push("Tunnel de prospection :");
+        v.tunnel.forEach(function(s, i){
+          lines.push((i+1) + ". " + (s.step||"(étape sans nom)") +
+            (s.timing ? " — " + s.timing : "") +
+            (s.budget ? " — " + s.budget : ""));
+          if(s.notes) lines.push("   " + s.notes);
+        });
+      } else {
+        lines.push("");
+        lines.push("Tunnel de prospection : (pas encore généré)");
+      }
+      if(v.questionnaire && v.questionnaire.length){
+        lines.push("");
+        lines.push("Questionnaire découverte :");
+        v.questionnaire.forEach(function(sec){
+          lines.push(sec.section || "(section sans nom)");
+          (sec.questions||[]).forEach(function(q){ lines.push("- " + q); });
+        });
+      }
+      lines.push("");
+    });
+    return lines.join("\n");
+  }
+
+  function openVenueExport(){
+    var text = buildVenueExportText();
+    els.exportBody.innerHTML =
+      '<h2>Exporter pour le chat</h2>'+
+      '<p class="hint">Copiez ce texte et collez-le dans une conversation avec Claude pour partager l\'état complet et à jour des tunnels de prospection.</p>'+
+      '<textarea id="export-text" readonly></textarea>'+
+      '<div class="panel-actions" style="margin-top:14px; justify-content:flex-start; gap:10px;">'+
+        '<button class="primary" id="btn-export-copy">Copier le texte</button>'+
+        '<button class="gold" id="btn-export-download" hidden>Télécharger en .txt</button>'+
+      '</div>'+
+      '<div class="analysis-status" id="export-copy-status" style="margin-top:8px;"></div>';
+    var ta = document.getElementById("export-text");
+    ta.value = text;
+    els.exportOverlay.hidden = false;
+    var statusEl = document.getElementById("export-copy-status");
+
+    document.getElementById("btn-export-copy").addEventListener("click", function(){
+      tryCopyText(text, statusEl, ta);
+    });
+
+    var dlBtn = document.getElementById("btn-export-download");
+    if(typeof capDownloads === "function"){
+      dlBtn.hidden = false;
+      dlBtn.addEventListener("click", function(){
+        var filename = "kleiomne-tunnels-export-" + now8601() + ".txt";
+        capDownloads.save({ filename: filename, data: text }).then(function(){
+          statusEl.textContent = "Fichier enregistré.";
+        }).catch(function(e){
+          statusEl.textContent = (e && e.code === "declined") ? "Téléchargement annulé." : "Le téléchargement a échoué — utilisez plutôt « Copier le texte ».";
+        });
+      });
+    }
+  }
+  els.btnExportVenues.addEventListener("click", openVenueExport);
 
   // ---------- knowledge base tab ----------
   function renderConnaissance(){
