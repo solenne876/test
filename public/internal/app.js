@@ -7,6 +7,12 @@ const CATEGORIES = [
   { code: "F-PON", label: "Événement ponctuel (devis)" },
 ];
 
+const TYPES_LIEU = [
+  { code: "", label: "Laisser l'outil déduire" },
+  { code: "L-CH", label: "Château / manoir" },
+  { code: "L-DOM", label: "Domaine viticole" },
+];
+
 const app = document.getElementById("app");
 const tabsEl = document.getElementById("tabs");
 
@@ -89,16 +95,20 @@ async function renderNouveau() {
       <p class="small-note">Le nom suffit pour lancer la recherche. L'outil interroge le web (histoire, offre événementielle, décisionnaire probable) et Gmail (échanges déjà eus avec ce contact), puis génère un tunnel sur-mesure et un lien questionnaire préempli.</p>
       <form id="nouveauForm">
         <div class="field"><label>Nom du lieu *</label><input type="text" name="nom" required placeholder="Château de Villeconin"></div>
-        <div class="field"><label>Contact — email</label><input type="email" name="contact_email" placeholder="contact@lieu.fr"></div>
-        <div class="field"><label>Contact — téléphone</label><input type="tel" name="contact_telephone"></div>
+        <div class="field"><label>Contact - email</label><input type="email" name="contact_email" placeholder="contact@lieu.fr"></div>
+        <div class="field"><label>Contact - téléphone</label><input type="tel" name="contact_telephone"></div>
         <div class="field">
-          <label>Catégorie(s) envisagée(s) — laisser vide pour que l'outil les suggère</label>
+          <label>Type de lieu - si tu le sais déjà, l'outil ne le devinera pas</label>
+          <select name="type_lieu_force">${TYPES_LIEU.map((t) => `<option value="${t.code}">${t.label}</option>`).join("")}</select>
+        </div>
+        <div class="field">
+          <label>Catégorie(s) envisagée(s) - laisser vide pour que l'outil les suggère</label>
           <div class="checkbox-row" id="catBox">
             ${CATEGORIES.map((c) => `<label><input type="checkbox" name="categories" value="${c.code}"> ${c.label}</label>`).join("")}
           </div>
         </div>
         <div class="field">
-          <label>Notes issues de conversations Claude passées (à coller manuellement — la recherche automatique ne couvre pas cette source)</label>
+          <label>Notes issues de conversations Claude passées (à coller manuellement - la recherche automatique ne couvre pas cette source)</label>
           <textarea name="notes_conversations_claude" placeholder="Ce lieu a-t-il déjà été évoqué, pitché ou écarté dans une conversation Claude précédente ? Collez ici ce qui est pertinent."></textarea>
         </div>
         <button class="primary" type="submit">Lancer la recherche et générer le tunnel</button>
@@ -116,6 +126,7 @@ async function renderNouveau() {
       nom: fd.get("nom"),
       contact_email: fd.get("contact_email") || null,
       contact_telephone: fd.get("contact_telephone") || null,
+      type_lieu_force: fd.get("type_lieu_force") || null,
       categories,
       notes_conversations_claude: fd.get("notes_conversations_claude") || "",
     };
@@ -157,8 +168,8 @@ async function renderHistorique() {
   `);
   const tbody = section.querySelector("tbody");
   for (const lieu of lieux) {
-    const cats = (lieu.categories || []).join(", ") || "—";
-    const questionnaireState = lieu.questionnaire_reponses ? "Réponses reçues" : lieu.questionnaire_meta && Object.keys(lieu.questionnaire_meta).length ? "En attente" : "—";
+    const cats = (lieu.categories || []).join(", ") || "-";
+    const questionnaireState = lieu.questionnaire_reponses ? "Réponses reçues" : lieu.questionnaire_meta && Object.keys(lieu.questionnaire_meta).length ? "En attente" : "-";
     const tr = el(`
       <tr data-id="${lieu.id}">
         <td>${escapeHtml(lieu.nom)}</td>
@@ -209,6 +220,113 @@ function tunnelStepHtml(step, idx) {
   `;
 }
 
+function questionRowHtml(q, sectionKey, idx) {
+  return `
+    <div class="q-row ${q.included ? "" : "q-row-excluded"}" data-section="${sectionKey}" data-idx="${idx}">
+      <label class="q-row-toggle">
+        <input type="checkbox" data-action="toggle-included" ${q.included ? "checked" : ""}>
+      </label>
+      <div class="q-row-body">
+        <input type="text" data-action="edit-text" value="${escapeHtml(q.text)}">
+        <span class="q-row-meta">${q.type === "QF" ? "Choix : " + escapeHtml((q.options || []).join(" / ")) : "Réponse libre"}</span>
+      </div>
+    </div>
+  `;
+}
+
+function exceptionRowHtml(e, idx, label) {
+  return `
+    <div class="q-row ${e.included ? "" : "q-row-excluded"}" data-section="formatsException" data-idx="${idx}">
+      <label class="q-row-toggle">
+        <input type="checkbox" data-action="toggle-included" ${e.included ? "checked" : ""}>
+      </label>
+      <div class="q-row-body">
+        <span class="q-row-meta" style="font-size:16px;color:var(--ivory)">${escapeHtml(label)} <em>(hors questionnaire écrit)</em></span>
+      </div>
+    </div>
+  `;
+}
+
+function renderQuestionnaireSection(lieu, id) {
+  const sel = lieu.questionnaire_selection || {};
+  const hasContent = (sel.general && sel.general.length) || (sel.lieu && sel.lieu.questions && sel.lieu.questions.length) || (sel.formats && Object.keys(sel.formats).length) || (sel.formatsException && sel.formatsException.length);
+
+  const section = el(`
+    <section class="card">
+      <div class="top-actions" style="margin-bottom:6px">
+        <h2>Questionnaire proposé</h2>
+        <span id="valideBadge" class="badge ${lieu.questionnaire_valide ? "ok" : "err"}">${lieu.questionnaire_valide ? "validé, visible du prospect" : "brouillon, pas encore envoyable"}</span>
+      </div>
+      <p class="small-note">Décoche une question pour l'exclure du lien envoyé au prospect (une réintégration reste possible d'un clic), corrige le texte si besoin. Le lien public n'affiche rien tant que ce n'est pas validé.</p>
+      <div id="qSections"></div>
+      <div style="margin-top:16px"><button class="primary" id="toggleValide" type="button">${lieu.questionnaire_valide ? "Modifier à nouveau (repasse en brouillon)" : "Valider le questionnaire"}</button></div>
+    </section>
+  `);
+
+  const host = section.querySelector("#qSections");
+  if (!hasContent) {
+    host.appendChild(el(`<p class="small-note">Aucune sélection de questions pour l'instant - génère ou régénère le tunnel.</p>`));
+  } else {
+    if (sel.general && sel.general.length) {
+      host.appendChild(el(`<h3>Général</h3>`));
+      sel.general.forEach((q, i) => host.appendChild(el(questionRowHtml(q, "general", i))));
+    }
+    if (sel.lieu && sel.lieu.questions && sel.lieu.questions.length) {
+      const label = sel.lieu.type_lieu === "L-CH" ? "Château / manoir" : sel.lieu.type_lieu === "L-DOM" ? "Domaine viticole" : "Type de lieu";
+      host.appendChild(el(`<h3>${escapeHtml(label)}</h3>`));
+      sel.lieu.questions.forEach((q, i) => host.appendChild(el(questionRowHtml(q, "lieu", i))));
+    }
+    for (const [code, questions] of Object.entries(sel.formats || {})) {
+      host.appendChild(el(`<h3>${escapeHtml(code)}</h3>`));
+      questions.forEach((q, i) => host.appendChild(el(questionRowHtml(q, `formats.${code}`, i))));
+    }
+    if (sel.formatsException && sel.formatsException.length) {
+      host.appendChild(el(`<h3>Hors questionnaire écrit</h3>`));
+      sel.formatsException.forEach((e, i) => host.appendChild(el(exceptionRowHtml(e, i, e.code))));
+    }
+  }
+
+  async function persistSelection() {
+    await api(`/lieux/${id}`, { method: "PATCH", body: JSON.stringify({ questionnaire_selection: sel }) });
+  }
+
+  function rowRef(sectionKey, idx) {
+    if (sectionKey === "general") return sel.general[idx];
+    if (sectionKey === "lieu") return sel.lieu.questions[idx];
+    if (sectionKey === "formatsException") return sel.formatsException[idx];
+    if (sectionKey.startsWith("formats.")) return sel.formats[sectionKey.slice(8)][idx];
+    return null;
+  }
+
+  host.addEventListener("change", async (e) => {
+    const input = e.target.closest("[data-action=toggle-included]");
+    if (!input) return;
+    const row = input.closest(".q-row");
+    const ref = rowRef(row.dataset.section, Number(row.dataset.idx));
+    if (!ref) return;
+    ref.included = input.checked;
+    row.classList.toggle("q-row-excluded", !ref.included);
+    await persistSelection();
+  });
+
+  host.addEventListener("blur", async (e) => {
+    const input = e.target.closest("[data-action=edit-text]");
+    if (!input) return;
+    const row = input.closest(".q-row");
+    const ref = rowRef(row.dataset.section, Number(row.dataset.idx));
+    if (!ref || ref.text === input.value) return;
+    ref.text = input.value;
+    await persistSelection();
+  }, true);
+
+  section.querySelector("#toggleValide").addEventListener("click", async () => {
+    await api(`/lieux/${id}`, { method: "PATCH", body: JSON.stringify({ questionnaire_valide: !lieu.questionnaire_valide }) });
+    router();
+  });
+
+  return section;
+}
+
 async function renderFiche(id) {
   const lieu = await api("/lieux/" + id);
 
@@ -236,9 +354,10 @@ async function renderFiche(id) {
       <h2>Fiche lieu</h2>
       <div class="row" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
         <div class="field" style="margin:0"><label>Nom</label><input type="text" id="f-nom" value="${escapeHtml(lieu.nom)}"></div>
-        <div class="field" style="margin:0"><label>Contact — email</label><input type="email" id="f-email" value="${escapeHtml(lieu.contact_email || "")}"></div>
-        <div class="field" style="margin:0"><label>Contact — téléphone</label><input type="tel" id="f-tel" value="${escapeHtml(lieu.contact_telephone || "")}"></div>
+        <div class="field" style="margin:0"><label>Contact - email</label><input type="email" id="f-email" value="${escapeHtml(lieu.contact_email || "")}"></div>
+        <div class="field" style="margin:0"><label>Contact - téléphone</label><input type="tel" id="f-tel" value="${escapeHtml(lieu.contact_telephone || "")}"></div>
       </div>
+      <div class="field"><label>Type de lieu</label><select id="f-type-lieu">${TYPES_LIEU.map((t) => `<option value="${t.code}" ${((lieu.type_lieu_force || "") === t.code) ? "selected" : ""}>${t.label}</option>`).join("")}</select></div>
       <div class="field"><label>Statut interne</label><select id="f-statut">${statutOptions(lieu.statut)}</select></div>
       <div class="field"><label>Cas pilote pour ce lieu (tant que non coché : tarifs réduits)</label>
         <label class="switch-label"><input type="checkbox" id="f-pilote" ${!lieu.premier_client_signe ? "checked" : ""}> Tarif pilote actif</label>
@@ -263,13 +382,16 @@ async function renderFiche(id) {
     `)
   );
 
+  // Questionnaire proposé : curation par Solenne avant envoi au prospect
+  wrap.appendChild(renderQuestionnaireSection(lieu, id));
+
   // Profil déduit
   if (lieu.profil_lieu_deduit) {
     wrap.appendChild(
       el(`
         <section class="card">
           <h2>Profil du lieu (déduit par l'outil)</h2>
-          <p><strong>${escapeHtml(lieu.profil_lieu_deduit.type)}</strong> — <span class="pill ${lieu.profil_lieu_deduit.statut === "confirmé" ? "tunnel_genere" : "questionnaire_recu"}">${escapeHtml(lieu.profil_lieu_deduit.statut)}</span></p>
+          <p><strong>${escapeHtml(lieu.profil_lieu_deduit.type)}</strong> - <span class="pill ${lieu.profil_lieu_deduit.statut === "confirmé" ? "tunnel_genere" : "questionnaire_recu"}">${escapeHtml(lieu.profil_lieu_deduit.statut)}</span></p>
           <p class="small-note">${escapeHtml(lieu.profil_lieu_deduit.justification)}</p>
         </section>
       `)
@@ -313,7 +435,7 @@ async function renderFiche(id) {
       <h3>Sources web</h3>
       ${infos.web && infos.web.length ? `<ul class="mono-list">${infos.web.map((s) => `<li><a href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.title || s.url)}</a></li>`).join("")}</ul>` : `<p class="small-note">Aucune source web enregistrée.</p>`}
       <h3>Gmail</h3>
-      ${infos.gmail_configure === false ? `<p class="small-note">Gmail non connecté sur ce déploiement.</p>` : infos.gmail && infos.gmail.length ? `<ul class="mono-list">${infos.gmail.map((m) => `<li>${escapeHtml(m.date)} — ${escapeHtml(m.subject)}</li>`).join("")}</ul>` : `<p class="small-note">Aucun échange trouvé.</p>`}
+      ${infos.gmail_configure === false ? `<p class="small-note">Gmail non connecté sur ce déploiement.</p>` : infos.gmail && infos.gmail.length ? `<ul class="mono-list">${infos.gmail.map((m) => `<li>${escapeHtml(m.date)} - ${escapeHtml(m.subject)}</li>`).join("")}</ul>` : `<p class="small-note">Aucun échange trouvé.</p>`}
       <h3>Notes conversations Claude passées</h3>
       <textarea id="f-notes">${escapeHtml(lieu.notes_conversations_claude || "")}</textarea>
       <div style="margin-top:10px"><button class="secondary" id="saveNotes" type="button">Enregistrer les notes</button></div>
@@ -357,6 +479,7 @@ async function renderFiche(id) {
         nom: wrap.querySelector("#f-nom").value,
         contact_email: wrap.querySelector("#f-email").value || null,
         contact_telephone: wrap.querySelector("#f-tel").value || null,
+        type_lieu_force: wrap.querySelector("#f-type-lieu").value || null,
         statut: wrap.querySelector("#f-statut").value,
         premier_client_signe: !wrap.querySelector("#f-pilote").checked,
       }),

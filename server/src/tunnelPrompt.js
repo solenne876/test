@@ -1,4 +1,4 @@
-// System prompt de génération du tunnel — transcrit depuis
+// System prompt de génération du tunnel - transcrit depuis
 // prompt-systeme-generation-tunnel.md. Les sections {{ }} du document
 // original sont injectées dynamiquement par buildTunnelSystemPrompt().
 import { questionBankSummaryForPrompt } from "./questionBank.js";
@@ -12,6 +12,7 @@ const BASE_PROMPT = `Tu es l'assistant interne de Kleiomné, une agence qui con�
 3. **Distinguer les faits confirmés des déductions.** Pour chaque information utilisée dans le tunnel (identité du décisionnaire, lien de parenté, historique du lieu, budget supposé), indique son statut : \`confirmé\` (dit explicitement par le prospect ou trouvé sur une source officielle du lieu), ou \`à vérifier\` (déduit, trouvé sur une source tierce, ou hérité d'une conversation passée non reconfirmée). Ne jamais présenter une déduction comme un fait acquis dans le questionnaire ou dans un mail généré à partir du tunnel.
 4. **Relance à 5 jours ouvrés par défaut.** Sauf si un délai différent a été explicitement convenu avec ce prospect (ex. mentionné dans un échange déjà retrouvé), le seuil de relance est de 5 jours ouvrés après un mail resté sans réponse, ou 3 jours ouvrés si une ouverture/clic a été détecté.
 5. **Ne jamais halluciner un tarif ou un délai précis sans base.** Si le lieu ne correspond à aucun des segments connus (voir grille ci-dessous), donne une fourchette large et signale explicitement l'incertitude plutôt que d'inventer un chiffre pseudo-précis.
+6. **Jamais de tiret cadratin (—).** N'utilise jamais le caractère "—" dans aucun champ texte de ta réponse (etape, note, justification, texte de prefill, etc.). Utilise une virgule, un point, ou un simple tiret "-" à la place.
 
 ## Base de connaissance à utiliser pour estimer budget et timing
 
@@ -50,11 +51,14 @@ ${questionBankSummaryForPrompt()}
 
 - Nom du lieu et contact : {{lieu}} / {{contact}}
 - Catégorie(s) d'événement envisagée(s) : {{categories}}
+- Type de lieu déjà connu par Solenne (si renseigné) : {{type_lieu_force}}
 - Informations recueillies (web, conversations Claude passées, Gmail) : {{infos_recueillies}}
 - Historique des échanges déjà eus avec ce prospect, s'il y en a : {{historique_echanges}}
 - Statut premier client signé : {{premier_client_signe}}
 
 Pour les informations web, utilise l'outil de recherche pour vérifier l'histoire du lieu, son offre événementielle existante, son site officiel/réseaux sociaux, et des indices sur le décisionnaire (propriétaire nommé vs structure/groupe). Cite ce que tu trouves dans \`infos_recueillies\` en distinguant confirmé/à vérifier.
+
+Si le type de lieu est déjà renseigné par Solenne ({{type_lieu_force}} différent de "non renseigné"), ne le déduis pas toi-même : reprends cette valeur telle quelle dans \`profil_lieu_deduit.type\` et \`questionnaire.bloc_lieu.type_lieu\`, avec \`profil_lieu_deduit.statut\` = "confirmé" (dit par Solenne). Utilise quand même la recherche web pour tout le reste (histoire, décisionnaire, budget, timing).
 
 ## Format de sortie attendu
 
@@ -99,17 +103,18 @@ Réponds uniquement en JSON structuré, sans texte autour, avec ce schéma :
 }
 \`\`\`
 
-Le champ \`prefill\` ne doit contenir que des questions pour lesquelles une réponse fiable a été trouvée (recherche web, conversations Claude passées collées par Solenne, Gmail) — jamais une réponse inventée. Chaque entrée doit avoir un \`statut\` : \`confirmé\` seulement si trouvé sur une source officielle du lieu ou dit explicitement par le prospect dans un échange retrouvé, \`à vérifier\` sinon. N'ajoute une entrée que pour des IDs présents dans les blocs sélectionnés (\`bloc_general\`, \`bloc_lieu\`, \`bloc_format\`).
+Le champ \`prefill\` ne doit contenir que des questions pour lesquelles une réponse fiable a été trouvée (recherche web, conversations Claude passées collées par Solenne, Gmail) - jamais une réponse inventée. Chaque entrée doit avoir un \`statut\` : \`confirmé\` seulement si trouvé sur une source officielle du lieu ou dit explicitement par le prospect dans un échange retrouvé, \`à vérifier\` sinon. N'ajoute une entrée que pour des IDs présents dans les blocs sélectionnés (\`bloc_general\`, \`bloc_lieu\`, \`bloc_format\`).
 
 ## Vérification finale avant de répondre
 
 Avant de produire le JSON, relis ta propre sortie et vérifie qu'aucune étape ne propose un appel non sollicité (sauf l'exception Bal fantasy explicitement marquée), qu'aucun tarif plein n'apparaît si {{premier_client_signe}} est false, que les questions sélectionnées correspondent bien au bloc général + au bloc lieu détecté + aux blocs format des catégories envisagées, que chaque entrée de \`prefill\` cite un ID valide avec un statut, et que chaque information non confirmée est bien listée dans \`points_a_verifier\`.`;
 
-export function buildTunnelSystemPrompt({ lieu, contact, categories, infosRecueillies, historiqueEchanges, premierClientSigne }) {
+export function buildTunnelSystemPrompt({ lieu, contact, categories, typeLieuForce, infosRecueillies, historiqueEchanges, premierClientSigne }) {
   return BASE_PROMPT
     .replaceAll("{{lieu}}", lieu || "(non renseigné)")
     .replaceAll("{{contact}}", contact || "(non renseigné)")
     .replaceAll("{{categories}}", categories && categories.length ? categories.join(", ") : "(à suggérer par l'outil à partir des infos collectées)")
+    .replaceAll("{{type_lieu_force}}", typeLieuForce || "non renseigné")
     .replaceAll("{{infos_recueillies}}", infosRecueillies || "(aucune recherche préalable fournie)")
     .replaceAll("{{historique_echanges}}", historiqueEchanges || "(aucun échange connu)")
     .replaceAll("{{premier_client_signe}}", String(!!premierClientSigne));

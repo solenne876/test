@@ -1,17 +1,17 @@
-# Kleiomné — outils de prospection
+# Kleiomné - outils de prospection
 
 Ce dépôt contient deux outils distincts :
 
-- **`index.html`** — le suivi de prospection existant (statuts d'envoi, relances, analytics), en pur HTML/JS local (`localStorage`), à ouvrir directement dans un navigateur.
-- **`server/` + `public/`** — le nouvel outil **tunnel + questionnaire**, décrit dans le cahier des charges : une fiche par lieu partagée entre l'interface interne et un lien public de questionnaire découverte. C'est un vrai backend (Node + SQLite), documenté ci-dessous.
+- **`index.html`** - le suivi de prospection existant (statuts d'envoi, relances, analytics), en pur HTML/JS local (`localStorage`), à ouvrir directement dans un navigateur.
+- **`server/` + `public/`** - le nouvel outil **tunnel + questionnaire**, décrit dans le cahier des charges : une fiche par lieu partagée entre l'interface interne et un lien public de questionnaire découverte. C'est un vrai backend (Node + SQLite), documenté ci-dessous.
 
 ## Outil tunnel + questionnaire
 
 ### Architecture
 
-- **Surface 1 — interface interne** (`public/internal/`, servie à la racine `/`) : recherche, génération et édition du tunnel, historique des lieux.
-- **Surface 2 — lien public par lieu** (`public/q/`, servie sur `/q/<slug>`) : questionnaire découverte préempli, sans authentification.
-- Les deux surfaces lisent/écrivent la **même fiche lieu** en base SQLite (`server/data/kleiomne.sqlite`, créée automatiquement — non versionnée).
+- **Surface 1 - interface interne** (`public/internal/`, servie à la racine `/`) : recherche, génération et édition du tunnel, historique des lieux.
+- **Surface 2 - lien public par lieu** (`public/q/`, servie sur `/q/<slug>`) : questionnaire découverte préempli, sans authentification.
+- Les deux surfaces lisent/écrivent la **même fiche lieu** en base SQLite (`server/data/kleiomne.sqlite`, créée automatiquement - non versionnée).
 
 ### Installation
 
@@ -42,16 +42,16 @@ Pour activer la recherche automatique des échanges déjà eus avec un contact :
 Sans ces variables, l'outil continue de fonctionner : la source Gmail est simplement ignorée (visible dans la fiche du lieu et sur le badge d'état en haut de l'interface interne).
 
 **Recherche dans les conversations Claude passées**
-Cette source n'est pas automatisable depuis un backend applicatif standard (elle n'existe que côté Claude.ai / Claude Code, pas via l'API publique). Elle reste **manuelle** : le champ « Notes issues de conversations Claude passées » dans la fiche du lieu (et à la création) permet à Solenne de coller ce qu'elle a trouvé — ces notes sont ensuite injectées dans le prompt de génération du tunnel comme les autres sources.
+Cette source n'est pas automatisable depuis un backend applicatif standard (elle n'existe que côté Claude.ai / Claude Code, pas via l'API publique). Elle reste **manuelle** : le champ « Notes issues de conversations Claude passées » dans la fiche du lieu (et à la création) permet à Solenne de coller ce qu'elle a trouvé - ces notes sont ensuite injectées dans le prompt de génération du tunnel comme les autres sources.
 
 ### Sécurité de la surface interne
 
-Le cahier des charges ne demandait pas de système de comptes, mais l'interface interne expose des données de prospection : dès que l'outil est accessible sur une URL publique, protégez-la avec `INTERNAL_BASIC_AUTH_USER` / `INTERNAL_BASIC_AUTH_PASS` (voir `.env.example`) — l'outil demandera alors un identifiant/mot de passe avant d'afficher l'interface interne ou de répondre à l'API interne. Sans ces variables, l'accès reste ouvert (pratique en local). La surface 2 (`/q/<slug>`), elle, reste toujours sans authentification (lien à usage prospect).
+Le cahier des charges ne demandait pas de système de comptes, mais l'interface interne expose des données de prospection : dès que l'outil est accessible sur une URL publique, protégez-la avec `INTERNAL_BASIC_AUTH_USER` / `INTERNAL_BASIC_AUTH_PASS` (voir `.env.example`) - l'outil demandera alors un identifiant/mot de passe avant d'afficher l'interface interne ou de répondre à l'API interne. Sans ces variables, l'accès reste ouvert (pratique en local). La surface 2 (`/q/<slug>`), elle, reste toujours sans authentification (lien à usage prospect).
 
 ### Déploiement sur Render.com (gratuit)
 
 1. Sur [dashboard.render.com](https://dashboard.render.com), **New +** → **Web Service**, puis connectez le repo GitHub `solenne876/test`.
-2. Render détecte `render.yaml` à la racine et propose de pré-remplir la configuration (Root Directory `server`, build `npm install`, start `npm start`) — validez, ou configurez-le manuellement si l'import Blueprint n'est pas proposé.
+2. Render détecte `render.yaml` à la racine et propose de pré-remplir la configuration (Root Directory `server`, build `npm install`, start `npm start`) - validez, ou configurez-le manuellement si l'import Blueprint n'est pas proposé.
 3. Dans **Environment**, renseignez au minimum `ANTHROPIC_API_KEY`. Ajoutez `INTERNAL_BASIC_AUTH_USER` / `INTERNAL_BASIC_AUTH_PASS` pour protéger l'interface interne (fortement recommandé), et les 3 variables `GMAIL_*` si vous avez configuré l'intégration Gmail.
 4. Déployez. L'interface interne est à la racine de l'URL Render (`https://<nom-du-service>.onrender.com`), et chaque lien questionnaire devient `https://<nom-du-service>.onrender.com/q/<slug>`.
 
@@ -61,4 +61,14 @@ Le cahier des charges ne demandait pas de système de comptes, mais l'interface 
 
 ### Statuts d'un lieu
 
-`Nouveau` → `Recherche en cours` → `Tunnel généré` → (`Questionnaire envoyé` — à passer manuellement une fois le lien collé dans le mail) → `Questionnaire reçu, tunnel à affiner` → `Tunnel affiné` (après régénération avec les réponses confirmées). `Erreur de génération` si l'appel à l'API a échoué (relançable depuis la fiche).
+`Nouveau` → `Recherche en cours` → `Tunnel généré` → (`Questionnaire envoyé` - à passer manuellement une fois le lien collé dans le mail) → `Questionnaire reçu, tunnel à affiner` → `Tunnel affiné` (après régénération avec les réponses confirmées). `Erreur de génération` si l'appel à l'API a échoué (relançable depuis la fiche).
+
+### Type de lieu (prérempli ou déduit)
+
+À la création (ou depuis la fiche), le champ **Type de lieu** permet de dire directement à l'outil s'il s'agit d'un château/manoir ou d'un domaine viticole plutôt que de le laisser deviner à partir de la recherche web. Une fois renseigné, la génération (et toute régénération) reprend cette valeur telle quelle.
+
+### Curation du questionnaire avant envoi
+
+Après génération, la fiche du lieu affiche une section **Questionnaire proposé** : la liste des questions retenues par l'IA (général, type de lieu, chaque format), éditables une par une - décocher pour exclure une question (réversible d'un clic), modifier le texte directement dans le champ.
+
+Tant que ce n'est pas validé (bouton **Valider le questionnaire**), le lien public (`/q/<slug>`) affiche une page « en préparation » : le prospect ne voit rien. Une fois validé, le lien devient consultable et affiche exactement la sélection retenue - le prospect ne choisit plus lui-même son type de lieu ni ses formats (c'est déjà déterminé par la catégorie/le type de lieu saisis à la création), il répond seulement aux questions retenues. Modifier à nouveau la sélection après validation repasse l'état en brouillon (bouton « Modifier à nouveau ») et masque le lien public jusqu'à revalidation.

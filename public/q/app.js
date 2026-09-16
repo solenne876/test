@@ -15,38 +15,30 @@ function escapeHtml(s) {
 }
 
 // ---------- État ----------
+// La sélection des questions (type de lieu, formats couverts, IDs retenus)
+// est désormais figée par Solenne côté interne (curation + validation) avant
+// que ce lien ne soit envoyé : le prospect répond au questionnaire proposé,
+// il ne choisit plus lui-même son type de lieu ni ses formats.
 
 const state = {
-  bank: null,
-  lieu: null,
+  bank: null, // FORMAT_BLOCKS / LIEU_BLOCKS / FORMAT_EXCEPTIONS / REVEALS / G15_WARNING (labels + branchement)
+  lieu: null, // réponse de /api/public/questionnaire/:slug (curatée, incluses uniquement)
   step: 0,
+  firstLoad: true,
   answers: {
     lieu_nom: "",
     general: {},
-    type_lieu: null,
     lieu: {},
-    formatsStandard: [], // codes cochés, dans l'ordre de coche
-    formats: {}, // code -> {id: valeur}
-    formatsException: [], // codes F-BAL/F-PON cochés
-    contactException: {}, // code -> téléphone
+    formats: {}, // code -> { id: valeur }
+    contactException: {}, // code -> téléphone laissé (formats hors questionnaire écrit)
   },
 };
-
-let ALL_QUESTIONS_BY_ID = {};
-
-function buildAllQuestionsIndex(bank) {
-  const map = {};
-  for (const group of bank.GENERAL_GROUPS) for (const q of group.questions) map[q.id] = q;
-  for (const block of Object.values(bank.LIEU_BLOCKS)) for (const q of block.questions) map[q.id] = q;
-  for (const block of Object.values(bank.FORMAT_BLOCKS)) for (const q of block.questions) map[q.id] = q;
-  ALL_QUESTIONS_BY_ID = map;
-}
 
 function persist() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ step: state.step, answers: state.answers }));
   } catch {
-    // stockage indisponible (navigation privée, etc.) — on continue sans persistance
+    // stockage indisponible (navigation privée, etc.) - on continue sans persistance
   }
 }
 
@@ -69,7 +61,7 @@ function loadPersisted() {
 // ---------- Rendu d'une question ----------
 
 function prefillFor(id) {
-  const prefill = state.lieu.questionnaire_prefill || {};
+  const prefill = state.lieu.prefill || {};
   return prefill[id] || null;
 }
 
@@ -84,7 +76,7 @@ function renderQuestion(q, answersObj, { nested = false, forceOpen = false } = {
       <div class="prefill-collapsed">
         <div>
           <div class="qtext">${escapeHtml(q.text)}</div>
-          <div class="val"><b>D'après nos recherches${pf.source ? " (" + escapeHtml(pf.source) + ")" : ""}</b> — ${escapeHtml(answersObj[q.id] ?? pf.valeur)} <em>(${escapeHtml(pf.statut)}, corrigez si besoin)</em></div>
+          <div class="val"><b>D'après nos recherches${pf.source ? " (" + escapeHtml(pf.source) + ")" : ""}</b> - ${escapeHtml(answersObj[q.id] ?? pf.valeur)} <em>(${escapeHtml(pf.statut)}, corrigez si besoin)</em></div>
         </div>
         <button type="button" data-action="edit-prefill">Corriger</button>
       </div>
@@ -102,7 +94,7 @@ function renderQuestion(q, answersObj, { nested = false, forceOpen = false } = {
   wrapper.appendChild(textEl);
   if (pf) {
     wrapper.appendChild(
-      el(`<div class="prefill-note">D'après nos recherches${pf.source ? " (" + escapeHtml(pf.source) + ")" : ""} — <b>${escapeHtml(pf.statut)}</b> : corrigez si besoin.</div>`)
+      el(`<div class="prefill-note">D'après nos recherches${pf.source ? " (" + escapeHtml(pf.source) + ")" : ""} - <b>${escapeHtml(pf.statut)}</b> : corrigez si besoin.</div>`)
     );
   }
 
@@ -115,7 +107,7 @@ function renderQuestion(q, answersObj, { nested = false, forceOpen = false } = {
     wrapper.appendChild(ta);
   } else {
     const row = el(`<div class="pill-row"></div>`);
-    for (const opt of q.options) {
+    for (const opt of q.options || []) {
       const btn = el(`<button type="button" class="pill-btn${answersObj[q.id] === opt ? " selected" : ""}">${escapeHtml(opt)}</button>`);
       btn.addEventListener("click", () => {
         answersObj[q.id] = opt;
@@ -132,18 +124,22 @@ function renderQuestion(q, answersObj, { nested = false, forceOpen = false } = {
 
 function rerenderQuestionInPlace(oldWrapper, q, answersObj, nested) {
   const forceOpen = oldWrapper.dataset.forceOpen === "1";
-  const fresh = renderQuestionWithReveals(q, answersObj, nested, forceOpen);
+  const fresh = renderQuestionWithReveals(q, answersObj, nested, forceOpen, oldWrapper.__idx);
   oldWrapper.replaceWith(fresh);
 }
 
-function renderQuestionWithReveals(q, answersObj, nested = false, forceOpen = false) {
+// `idx` : map id -> question curatée, scopé à la liste en cours de rendu
+// (général, lieu, ou un format donné) - permet de savoir si une question
+// révélée par REVEALS a bien été retenue par Solenne dans cette liste.
+function renderQuestionWithReveals(q, answersObj, nested = false, forceOpen = false, idx) {
   const wrapper = renderQuestion(q, answersObj, { nested, forceOpen });
+  wrapper.__idx = idx;
   const rules = state.bank.REVEALS.filter((r) => r.from === q.id);
   for (const rule of rules) {
     if (answersObj[q.id] === rule.value) {
       for (const revId of rule.reveal) {
-        const revQ = ALL_QUESTIONS_BY_ID[revId];
-        if (revQ) wrapper.appendChild(renderQuestionWithReveals(revQ, answersObj, true));
+        const revQ = idx[revId];
+        if (revQ) wrapper.appendChild(renderQuestionWithReveals(revQ, answersObj, true, false, idx));
       }
     } else {
       for (const revId of rule.reveal) {
@@ -162,12 +158,19 @@ function applyPrefillIfFirstLoad(questions, answersObj) {
   }
 }
 
-function renderBlockQuestions(container, questions, answersObj) {
+function renderCuratedList(container, questions, answersObj) {
+  if (!questions || questions.length === 0) return;
   applyPrefillIfFirstLoad(questions, answersObj);
+  const idx = {};
+  for (const q of questions) idx[q.id] = q;
   const revealedIds = new Set(state.bank.REVEALS.flatMap((r) => r.reveal));
-  const topLevel = questions.filter((q) => !revealedIds.has(q.id));
+  const topLevel = questions.filter((q) => {
+    if (!revealedIds.has(q.id)) return true;
+    const rule = state.bank.REVEALS.find((r) => r.reveal.includes(q.id));
+    return !idx[rule.from]; // pas de déclencheur retenu dans cette liste -> affichage direct
+  });
   for (const q of topLevel) {
-    container.appendChild(renderQuestionWithReveals(q, answersObj, false));
+    container.appendChild(renderQuestionWithReveals(q, answersObj, false, false, idx));
   }
 }
 
@@ -187,12 +190,12 @@ function navRow(onPrev, onNext, nextLabel = "Suivant") {
       <div>${onPrev ? `<button type="button" class="secondary" id="navPrev">Précédent</button>` : ""}</div>
       <div style="display:flex;gap:10px;align-items:center">
         <button type="button" class="link-btn" id="navRestart">Recommencer</button>
-        <button type="button" class="primary" id="navNext">${nextLabel}</button>
+        ${onNext ? `<button type="button" class="primary" id="navNext">${nextLabel}</button>` : ""}
       </div>
     </div>
   `);
   if (onPrev) row.querySelector("#navPrev").addEventListener("click", onPrev);
-  row.querySelector("#navNext").addEventListener("click", onNext);
+  if (onNext) row.querySelector("#navNext").addEventListener("click", onNext);
   row.querySelector("#navRestart").addEventListener("click", () => {
     if (!confirm("Effacer toutes vos réponses et recommencer le questionnaire ?")) return;
     try { localStorage.removeItem(STORAGE_KEY); } catch {}
@@ -220,43 +223,20 @@ function renderStep0() {
 }
 
 function renderStep1() {
-  const card = el(`<section class="card"><h2>À propos de votre lieu</h2><p class="intro">Toutes ces questions sont optionnelles — répondez à ce qui vous semble pertinent.</p></section>`);
-  applyPrefillIfFirstLoad(state.bank.GENERAL_GROUPS.flatMap((g) => g.questions), state.answers.general);
-  for (const group of state.bank.GENERAL_GROUPS) {
-    card.appendChild(el(`<div class="group-title">${escapeHtml(group.subtitle)}</div>`));
-    for (const q of group.questions) {
-      card.appendChild(renderQuestionWithReveals(q, state.answers.general, false));
-    }
-  }
+  const card = el(`<section class="card"><h2>À propos de votre lieu</h2><p class="intro">Toutes ces questions sont optionnelles - répondez à ce qui vous semble pertinent.</p></section>`);
+  renderCuratedList(card, state.lieu.questions_general, state.answers.general);
   app.appendChild(card);
   app.appendChild(navRow(() => { state.step = 0; render(); }, () => { state.step = 2; persist(); render(); }));
 }
 
 function renderStep2() {
-  const card = el(`
-    <section class="card">
-      <h2>Type de lieu</h2>
-      <div class="radio-row" id="typeLieuRow"></div>
-      <div id="lieuBlockHost" style="margin-top:18px"></div>
-    </section>
-  `);
-  const row = card.querySelector("#typeLieuRow");
-  for (const [key, block] of Object.entries(state.bank.LIEU_BLOCKS)) {
-    const label = el(`<label><input type="radio" name="typeLieu" value="${key}" ${state.answers.type_lieu === key ? "checked" : ""}> ${escapeHtml(block.label)}</label>`);
-    label.querySelector("input").addEventListener("change", () => {
-      if (state.answers.type_lieu !== key) {
-        state.answers.lieu = {}; // on vide les réponses du bloc précédent, jamais les deux superposés
-        state.answers.type_lieu = key;
-        persist();
-        render();
-      }
-    });
-    row.appendChild(label);
-  }
-  const host = card.querySelector("#lieuBlockHost");
-  if (state.answers.type_lieu) {
-    const block = state.bank.LIEU_BLOCKS[state.answers.type_lieu];
-    renderBlockQuestions(host, block.questions, state.answers.lieu);
+  const typeLabel = state.lieu.type_lieu && state.bank.LIEU_BLOCKS[state.lieu.type_lieu]
+    ? state.bank.LIEU_BLOCKS[state.lieu.type_lieu].label
+    : "Votre lieu";
+  const card = el(`<section class="card"><h2>${escapeHtml(typeLabel)}</h2></section>`);
+  renderCuratedList(card, state.lieu.questions_lieu, state.answers.lieu);
+  if (!state.lieu.questions_lieu || state.lieu.questions_lieu.length === 0) {
+    card.appendChild(el(`<p class="intro">Rien à préciser ici pour ce lieu.</p>`));
   }
   app.appendChild(card);
   app.appendChild(navRow(() => { state.step = 1; render(); }, () => { state.step = 3; persist(); render(); }));
@@ -267,68 +247,36 @@ function g15Answer() {
 }
 
 function renderStep3() {
-  const card = el(`
-    <section class="card">
-      <h2>Formats envisagés</h2>
-      <p class="intro">Cochez un ou plusieurs formats — chacun ouvre ses propres questions.</p>
-      <div class="checkbox-row" id="formatsRow"></div>
-      <div id="formatsHost" style="margin-top:10px"></div>
-    </section>
-  `);
-  const row = card.querySelector("#formatsRow");
-  const standardCodes = Object.keys(state.bank.FORMAT_BLOCKS);
-  const exceptionCodes = Object.keys(state.bank.FORMAT_EXCEPTIONS);
+  const formatCodes = Object.keys(state.lieu.formats || {});
+  const exceptionCodes = state.lieu.formats_exception || [];
 
-  function isChecked(code) {
-    return state.answers.formatsStandard.includes(code) || state.answers.formatsException.includes(code);
-  }
-  function toggle(code, isException) {
-    const listKey = isException ? "formatsException" : "formatsStandard";
-    const list = state.answers[listKey];
-    const idx = list.indexOf(code);
-    if (idx === -1) {
-      list.push(code);
-    } else {
-      list.splice(idx, 1);
-      if (isException) delete state.answers.contactException[code];
-      else delete state.answers.formats[code];
-    }
-    persist();
-    render();
+  if (formatCodes.length === 0 && exceptionCodes.length === 0) {
+    app.appendChild(el(`<section class="card"><h2>Formats envisagés</h2><p class="intro">Rien à préciser ici.</p></section>`));
+    app.appendChild(navRow(() => { state.step = 2; render(); }, () => { state.step = 4; persist(); render(); }, "Voir le récapitulatif"));
+    return;
   }
 
-  for (const code of standardCodes) {
-    const block = state.bank.FORMAT_BLOCKS[code];
-    const label = el(`<label><input type="checkbox" ${isChecked(code) ? "checked" : ""}> ${escapeHtml(block.label)}</label>`);
-    label.querySelector("input").addEventListener("change", () => toggle(code, false));
-    row.appendChild(label);
+  for (const code of formatCodes) {
+    const label = state.bank.FORMAT_BLOCKS[code] ? state.bank.FORMAT_BLOCKS[code].label : code;
+    const card = el(`<section class="card"><h2>${escapeHtml(label)}</h2></section>`);
     if (code === "F-VIS" && state.bank.G15_WARNING && g15Answer() === state.bank.G15_WARNING.triggerValue) {
-      row.appendChild(el(`<div class="g15-warning">⚠ ${escapeHtml(state.bank.G15_WARNING.message)}</div>`));
+      card.appendChild(el(`<div class="g15-warning" style="margin-left:0">⚠ ${escapeHtml(state.bank.G15_WARNING.message)}</div>`));
     }
-  }
-  for (const code of exceptionCodes) {
-    const block = state.bank.FORMAT_EXCEPTIONS[code];
-    const label = el(`<label><input type="checkbox" ${isChecked(code) ? "checked" : ""}> ${escapeHtml(block.label)}</label>`);
-    label.querySelector("input").addEventListener("change", () => toggle(code, true));
-    row.appendChild(label);
+    if (!state.answers.formats[code]) state.answers.formats[code] = {};
+    renderCuratedList(card, state.lieu.formats[code], state.answers.formats[code]);
+    app.appendChild(card);
   }
 
-  const host = card.querySelector("#formatsHost");
-  for (const code of state.answers.formatsStandard) {
-    const block = state.bank.FORMAT_BLOCKS[code];
-    if (!block) continue;
-    host.appendChild(el(`<div class="group-title">${escapeHtml(block.label)}</div>`));
-    if (!state.answers.formats[code]) state.answers.formats[code] = {};
-    renderBlockQuestions(host, block.questions, state.answers.formats[code]);
-  }
-  for (const code of state.answers.formatsException) {
+  for (const code of exceptionCodes) {
     const block = state.bank.FORMAT_EXCEPTIONS[code];
     if (!block) continue;
     const box = el(`
-      <div class="exception-box">
-        <p><b>${escapeHtml(block.label)}</b> — ${escapeHtml(block.encart)}</p>
-        ${block.contactField ? `<input type="tel" placeholder="Numéro de téléphone (optionnel)" value="${escapeHtml(state.answers.contactException[code] || "")}">` : ""}
-      </div>
+      <section class="card">
+        <div class="exception-box" style="margin:0">
+          <p><b>${escapeHtml(block.label)}</b> - ${escapeHtml(block.encart)}</p>
+          ${block.contactField ? `<input type="tel" placeholder="Numéro de téléphone (optionnel)" value="${escapeHtml(state.answers.contactException[code] || "")}">` : ""}
+        </div>
+      </section>
     `);
     if (block.contactField) {
       box.querySelector("input").addEventListener("input", (e) => {
@@ -336,48 +284,46 @@ function renderStep3() {
         persist();
       });
     }
-    host.appendChild(box);
+    app.appendChild(box);
   }
 
-  app.appendChild(card);
   app.appendChild(navRow(() => { state.step = 2; render(); }, () => { state.step = 4; persist(); render(); }, "Voir le récapitulatif"));
 }
 
 function buildSubmissionPayload() {
+  const formatCodes = Object.keys(state.lieu.formats || {});
   const reponses_formats = {};
-  for (const code of state.answers.formatsStandard) {
-    reponses_formats[code] = state.answers.formats[code] || {};
-  }
+  for (const code of formatCodes) reponses_formats[code] = state.answers.formats[code] || {};
   return {
     lieu_nom: state.answers.lieu_nom || state.lieu.nom,
-    type_lieu: state.answers.type_lieu || null,
+    type_lieu: state.lieu.type_lieu || null,
     reponses_general: state.answers.general,
     reponses_lieu: state.answers.lieu,
-    formats_selectionnes_standard: state.answers.formatsStandard,
+    formats_selectionnes_standard: formatCodes,
     reponses_formats,
-    formats_exception_selectionnes: state.answers.formatsException,
+    formats_exception_selectionnes: state.lieu.formats_exception || [],
     contact_exception: state.answers.contactException,
     avertissements_actifs:
-      g15Answer() === "Oui" && state.answers.formatsStandard.includes("F-VIS")
-        ? ["G15=Oui → F-VIS à valider"]
+      g15Answer() === "Oui" && formatCodes.includes("F-VIS")
+        ? ["G15=Oui -> F-VIS à valider"]
         : [],
   };
 }
 
 function buildMailBody(payload) {
-  const lines = [`Réponses au questionnaire découverte — ${payload.lieu_nom}`, ""];
-  lines.push("— Général —");
+  const lines = [`Réponses au questionnaire découverte - ${payload.lieu_nom}`, ""];
+  lines.push("- Général -");
   for (const [id, val] of Object.entries(payload.reponses_general)) lines.push(`${id}: ${val}`);
   if (payload.type_lieu) {
-    lines.push("", `— ${payload.type_lieu} —`);
+    lines.push("", `- ${payload.type_lieu} -`);
     for (const [id, val] of Object.entries(payload.reponses_lieu)) lines.push(`${id}: ${val}`);
   }
   for (const code of payload.formats_selectionnes_standard) {
-    lines.push("", `— ${code} —`);
+    lines.push("", `- ${code} -`);
     for (const [id, val] of Object.entries(payload.reponses_formats[code] || {})) lines.push(`${id}: ${val}`);
   }
   for (const code of payload.formats_exception_selectionnes) {
-    lines.push("", `— ${code} (hors questionnaire écrit) —`);
+    lines.push("", `- ${code} (hors questionnaire écrit) -`);
     if (payload.contact_exception[code]) lines.push(`Téléphone : ${payload.contact_exception[code]}`);
   }
   return lines.join("\n");
@@ -387,35 +333,31 @@ function renderStep4() {
   const payload = buildSubmissionPayload();
   const card = el(`<section class="card"><h2>Récapitulatif</h2><p class="intro">Relisez vos réponses avant l'envoi.</p></section>`);
 
-  const genBlock = el(`<div class="recap-block"><h3>Général</h3></div>`);
-  for (const [id, val] of Object.entries(payload.reponses_general)) {
-    if (val === undefined || val === "") continue;
-    genBlock.appendChild(el(`<div class="recap-item"><b>${escapeHtml(ALL_QUESTIONS_BY_ID[id]?.text || id)}</b><br>${escapeHtml(val)}</div>`));
-  }
-  card.appendChild(genBlock);
-
-  if (payload.type_lieu) {
-    const lieuBlock = el(`<div class="recap-block"><h3>${escapeHtml(state.bank.LIEU_BLOCKS[payload.type_lieu].label)}</h3></div>`);
-    for (const [id, val] of Object.entries(payload.reponses_lieu)) {
+  function block(title, questions, values) {
+    if (!questions || questions.length === 0) return;
+    const b = el(`<div class="recap-block"><h3>${escapeHtml(title)}</h3></div>`);
+    let any = false;
+    for (const q of questions) {
+      const val = values[q.id];
       if (val === undefined || val === "") continue;
-      lieuBlock.appendChild(el(`<div class="recap-item"><b>${escapeHtml(ALL_QUESTIONS_BY_ID[id]?.text || id)}</b><br>${escapeHtml(val)}</div>`));
+      any = true;
+      b.appendChild(el(`<div class="recap-item"><b>${escapeHtml(q.text)}</b><br>${escapeHtml(val)}</div>`));
     }
-    card.appendChild(lieuBlock);
+    if (any) card.appendChild(b);
   }
 
-  for (const code of payload.formats_selectionnes_standard) {
-    const fmtBlock = el(`<div class="recap-block"><h3>${escapeHtml(state.bank.FORMAT_BLOCKS[code].label)}</h3></div>`);
-    for (const [id, val] of Object.entries(payload.reponses_formats[code] || {})) {
-      if (val === undefined || val === "") continue;
-      fmtBlock.appendChild(el(`<div class="recap-item"><b>${escapeHtml(ALL_QUESTIONS_BY_ID[id]?.text || id)}</b><br>${escapeHtml(val)}</div>`));
-    }
-    card.appendChild(fmtBlock);
+  block("Général", state.lieu.questions_general, state.answers.general);
+  const typeLabel = state.lieu.type_lieu && state.bank.LIEU_BLOCKS[state.lieu.type_lieu] ? state.bank.LIEU_BLOCKS[state.lieu.type_lieu].label : null;
+  if (typeLabel) block(typeLabel, state.lieu.questions_lieu, state.answers.lieu);
+  for (const code of Object.keys(state.lieu.formats || {})) {
+    const label = state.bank.FORMAT_BLOCKS[code] ? state.bank.FORMAT_BLOCKS[code].label : code;
+    block(label, state.lieu.formats[code], state.answers.formats[code] || {});
   }
-
-  for (const code of payload.formats_exception_selectionnes) {
-    const block = state.bank.FORMAT_EXCEPTIONS[code];
+  for (const code of state.lieu.formats_exception || []) {
+    const b = state.bank.FORMAT_EXCEPTIONS[code];
+    if (!b) continue;
     card.appendChild(
-      el(`<div class="recap-block"><h3>${escapeHtml(block.label)}</h3><div class="recap-item">${escapeHtml(block.encart)}${payload.contact_exception[code] ? " — Téléphone : " + escapeHtml(payload.contact_exception[code]) : ""}</div></div>`)
+      el(`<div class="recap-block"><h3>${escapeHtml(b.label)}</h3><div class="recap-item">${escapeHtml(b.encart)}${payload.contact_exception[code] ? " - Téléphone : " + escapeHtml(payload.contact_exception[code]) : ""}</div></div>`)
     );
   }
 
@@ -447,13 +389,11 @@ function renderStep4() {
   });
   actionsRow.appendChild(sendBtn);
 
-  const mailBtn = el(`<a class="secondary" style="text-decoration:none;display:inline-block;text-align:center" href="mailto:?subject=${encodeURIComponent("Questionnaire découverte — " + payload.lieu_nom)}&body=${encodeURIComponent(buildMailBody(payload))}">Envoyer par email</a>`);
+  const mailBtn = el(`<a class="secondary" style="text-decoration:none;display:inline-block;text-align:center" href="mailto:?subject=${encodeURIComponent("Questionnaire découverte - " + payload.lieu_nom)}&body=${encodeURIComponent(buildMailBody(payload))}">Envoyer par email</a>`);
   actionsRow.appendChild(mailBtn);
 
   app.appendChild(actionsCard);
   app.appendChild(navRow(() => { state.step = 3; render(); }, null));
-  // pas de bouton "suivant" sur la dernière étape — on retire celui ajouté par navRow
-  app.lastElementChild.querySelector("#navNext").remove();
 }
 
 // ---------- Rendu principal ----------
@@ -462,6 +402,17 @@ function render() {
   app.innerHTML = "";
   renderStepper();
   [renderStep0, renderStep1, renderStep2, renderStep3, renderStep4][state.step]();
+}
+
+function renderNotReady() {
+  stepperEl.innerHTML = "";
+  app.innerHTML = "";
+  app.appendChild(el(`
+    <section class="card">
+      <h2>Questionnaire en préparation</h2>
+      <p class="intro">Ce lien n'est pas encore prêt à être rempli. Kleiomné finalise le questionnaire pour votre lieu - repassez un peu plus tard, ou rapprochez-vous de votre contact.</p>
+    </section>
+  `));
 }
 
 // ---------- Init ----------
@@ -477,8 +428,12 @@ async function init() {
     ]);
     state.bank = bankRes;
     state.lieu = lieuRes;
-    buildAllQuestionsIndex(bankRes);
-    pageTitle.textContent = `Questionnaire découverte — ${lieuRes.nom}`;
+    pageTitle.textContent = `Questionnaire découverte - ${lieuRes.nom}`;
+
+    if (!lieuRes.pret) {
+      renderNotReady();
+      return;
+    }
 
     const hadPersisted = loadPersisted();
     state.firstLoad = !hadPersisted;

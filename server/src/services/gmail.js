@@ -2,7 +2,7 @@ import { google } from "googleapis";
 
 // Intégration Gmail en lecture seule (cahier des charges : "lecture seule
 // suffit, pas besoin de préparer ou envoyer des brouillons depuis l'outil").
-// Nécessite des identifiants OAuth2 configurés côté déploiement — voir
+// Nécessite des identifiants OAuth2 configurés côté déploiement - voir
 // README.md. Si absents, toutes les fonctions renvoient un résultat vide
 // plutôt que d'échouer, et l'outil continue avec les autres sources.
 
@@ -63,7 +63,7 @@ export async function searchThreadsWithContact(contactEmail, { maxResults = 15 }
 }
 
 export function summarizeThreadForPrompt(threadResult) {
-  if (!threadResult.configured) return "Gmail non connecté — source non interrogée.";
+  if (!threadResult.configured) return "Gmail non connecté - source non interrogée.";
   if (threadResult.messages.length === 0) return "Aucun échange Gmail trouvé avec ce contact.";
   return threadResult.messages
     .map((m) => `- ${m.date} | ${m.from} → ${m.to} | "${m.subject}" | ${m.snippet}`)

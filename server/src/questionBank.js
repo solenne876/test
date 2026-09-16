@@ -156,7 +156,7 @@ export const FORMAT_EXCEPTIONS = {
   },
 };
 
-// Table exhaustive des branchements conditionnels — SEULS branchements à
+// Table exhaustive des branchements conditionnels - SEULS branchements à
 // implémenter (prompt-branching-questionnaire.md §3)
 export const REVEALS = [
   { from: "L-CH5", value: "Oui", reveal: ["L-CH6"] },

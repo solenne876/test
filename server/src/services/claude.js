@@ -61,6 +61,7 @@ export async function generateTunnel({
   contactEmail,
   contactTelephone,
   categories,
+  typeLieuForce,
   infosRecueilliesTexte,
   historiqueEchangesTexte,
   premierClientSigne,
@@ -68,7 +69,7 @@ export async function generateTunnel({
   const anthropic = getClient();
   if (!anthropic) {
     const err = new Error(
-      "ANTHROPIC_API_KEY non configurée — impossible de générer le tunnel. Voir README pour la configuration."
+      "ANTHROPIC_API_KEY non configurée - impossible de générer le tunnel. Voir README pour la configuration."
     );
     err.code = "CLAUDE_NOT_CONFIGURED";
     throw err;
@@ -78,6 +79,7 @@ export async function generateTunnel({
     lieu: nom,
     contact: [contactEmail, contactTelephone].filter(Boolean).join(" / "),
     categories,
+    typeLieuForce,
     infosRecueillies: infosRecueilliesTexte,
     historiqueEchanges: historiqueEchangesTexte,
     premierClientSigne,

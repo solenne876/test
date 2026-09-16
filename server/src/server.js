@@ -18,7 +18,7 @@ app.use(cors());
 app.use(express.json({ limit: "2mb" }));
 
 // Protège la surface interne (interface + API interne) par Basic Auth quand
-// INTERNAL_BASIC_AUTH_USER/PASS sont configurés — utile dès que l'outil est
+// INTERNAL_BASIC_AUTH_USER/PASS sont configurés - utile dès que l'outil est
 // déployé sur une URL publique. Jamais appliqué à /q ni /api/public : le lien
 // questionnaire doit rester accessible au prospect sans identifiants.
 function timingSafeEqual(a, b) {
@@ -48,17 +48,17 @@ function requireInternalAuth(req, res, next) {
 app.use("/api/public", publicRouter);
 app.use("/api", requireInternalAuth, internalRouter);
 
-// Surface 2 — lien public par lieu (outil.toi/q/<slug>), sans authentification
+// Surface 2 - lien public par lieu (outil.toi/q/<slug>), sans authentification
 app.use("/q", express.static(PUBLIC_Q));
 app.get("/q/:slug", (req, res) => {
   res.sendFile(path.join(PUBLIC_Q, "index.html"));
 });
 
-// Surface 1 — interface interne, protégée par Basic Auth si configuré (voir
+// Surface 1 - interface interne, protégée par Basic Auth si configuré (voir
 // INTERNAL_BASIC_AUTH_USER/PASS dans .env.example)
 app.use(requireInternalAuth, express.static(PUBLIC_INTERNAL));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Kleiomné — outil de prospection en écoute sur http://localhost:${PORT}`);
+  console.log(`Kleiomné - outil de prospection en écoute sur http://localhost:${PORT}`);
 });

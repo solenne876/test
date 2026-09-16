@@ -4,8 +4,40 @@ import { parseLieuRow, STATUTS } from "../lieuModel.js";
 import { makeId, makeSlug } from "../util.js";
 import { generateTunnel, isClaudeConfigured } from "../services/claude.js";
 import { searchThreadsWithContact, summarizeThreadForPrompt, isGmailConfigured } from "../services/gmail.js";
+import { allQuestionsById, FORMAT_EXCEPTIONS } from "../questionBank.js";
 
 export const internalRouter = express.Router();
+
+// Construit la proposition de questionnaire (curatable ensuite par Solenne)
+// à partir de la sélection d'IDs renvoyée par l'IA + de la banque de
+// questions. Tout est inclus par défaut : c'est la fiche lieu qui permet
+// ensuite de décocher/éditer avant validation.
+function buildDefaultSelection(meta, categories) {
+  const byId = allQuestionsById();
+  const toRow = (id) => {
+    const q = byId[id];
+    if (!q) return null;
+    return { id: q.id, text: q.text, type: q.type, options: q.options || null, included: true };
+  };
+
+  const general = (meta?.bloc_general || []).map(toRow).filter(Boolean);
+  const lieuQuestions = (meta?.bloc_lieu?.questions || []).map(toRow).filter(Boolean);
+  const formats = {};
+  for (const [code, ids] of Object.entries(meta?.bloc_format?.questions_par_categorie || {})) {
+    const rows = (ids || []).map(toRow).filter(Boolean);
+    if (rows.length) formats[code] = rows;
+  }
+  const formatsException = (categories || [])
+    .filter((code) => FORMAT_EXCEPTIONS[code])
+    .map((code) => ({ code, included: true }));
+
+  return {
+    general,
+    lieu: { type_lieu: meta?.bloc_lieu?.type_lieu || null, questions: lieuQuestions },
+    formats,
+    formatsException,
+  };
+}
 
 async function performGeneration(id, { useQuestionnaireReponses = false } = {}) {
   const row = db.prepare("SELECT * FROM lieux WHERE id = ?").get(id);
@@ -16,7 +48,7 @@ async function performGeneration(id, { useQuestionnaireReponses = false } = {}) 
   );
 
   let gmailResult = { configured: false, messages: [] };
-  let gmailSummary = "Gmail non connecté — source non interrogée.";
+  let gmailSummary = "Gmail non connecté - source non interrogée.";
   try {
     gmailResult = await searchThreadsWithContact(lieu.contact_email);
     gmailSummary = summarizeThreadForPrompt(gmailResult);
@@ -47,6 +79,7 @@ async function performGeneration(id, { useQuestionnaireReponses = false } = {}) 
       contactEmail: lieu.contact_email,
       contactTelephone: lieu.contact_telephone,
       categories: lieu.categories,
+      typeLieuForce: lieu.type_lieu_force,
       infosRecueilliesTexte: infosTexte,
       historiqueEchangesTexte: historiqueTexte,
       premierClientSigne: lieu.premier_client_signe,
@@ -60,6 +93,7 @@ async function performGeneration(id, { useQuestionnaireReponses = false } = {}) 
     };
 
     const newStatut = useQuestionnaireReponses ? STATUTS.TUNNEL_AFFINE : STATUTS.TUNNEL_GENERE;
+    const selection = buildDefaultSelection(parsed.questionnaire, lieu.categories);
 
     db.prepare(
       `UPDATE lieux SET
@@ -69,6 +103,8 @@ async function performGeneration(id, { useQuestionnaireReponses = false } = {}) 
         tunnel = @tunnel,
         questionnaire_meta = @questionnaire_meta,
         questionnaire_prefill = @questionnaire_prefill,
+        questionnaire_selection = @questionnaire_selection,
+        questionnaire_valide = 0,
         points_a_verifier = @points_a_verifier,
         generation_error = NULL,
         updated_at = datetime('now')
@@ -81,6 +117,7 @@ async function performGeneration(id, { useQuestionnaireReponses = false } = {}) 
       tunnel: JSON.stringify(parsed.tunnel || []),
       questionnaire_meta: JSON.stringify(parsed.questionnaire || {}),
       questionnaire_prefill: JSON.stringify(parsed.prefill || {}),
+      questionnaire_selection: JSON.stringify(selection),
       points_a_verifier: JSON.stringify(parsed.points_a_verifier || []),
     });
   } catch (e) {
@@ -121,16 +158,19 @@ internalRouter.get("/lieux/:id", (req, res) => {
 });
 
 internalRouter.post("/lieux", async (req, res) => {
-  const { nom, contact_email, contact_telephone, categories, notes_conversations_claude } = req.body;
+  const { nom, contact_email, contact_telephone, categories, type_lieu_force, notes_conversations_claude } = req.body;
   if (!nom || !nom.trim()) return res.status(400).json({ error: "Le nom du lieu est requis" });
+  if (type_lieu_force && !["L-CH", "L-DOM"].includes(type_lieu_force)) {
+    return res.status(400).json({ error: "type_lieu_force invalide" });
+  }
 
   const id = makeId();
   const slug = makeSlug(nom);
   const premierClientSigne = getSetting("premier_client_signe", false);
 
   db.prepare(
-    `INSERT INTO lieux (id, slug, nom, contact_email, contact_telephone, categories, notes_conversations_claude, premier_client_signe, statut)
-     VALUES (@id, @slug, @nom, @contact_email, @contact_telephone, @categories, @notes_conversations_claude, @premier_client_signe, @statut)`
+    `INSERT INTO lieux (id, slug, nom, contact_email, contact_telephone, categories, type_lieu_force, notes_conversations_claude, premier_client_signe, statut)
+     VALUES (@id, @slug, @nom, @contact_email, @contact_telephone, @categories, @type_lieu_force, @notes_conversations_claude, @premier_client_signe, @statut)`
   ).run({
     id,
     slug,
@@ -138,6 +178,7 @@ internalRouter.post("/lieux", async (req, res) => {
     contact_email: contact_email || null,
     contact_telephone: contact_telephone || null,
     categories: JSON.stringify(Array.isArray(categories) ? categories : []),
+    type_lieu_force: type_lieu_force || null,
     notes_conversations_claude: notes_conversations_claude || "",
     premier_client_signe: premierClientSigne ? 1 : 0,
     statut: STATUTS.NOUVEAU,
@@ -160,8 +201,15 @@ const EDITABLE_FIELDS = [
   "contact_telephone",
   "notes_conversations_claude",
   "statut",
+  "type_lieu_force",
 ];
-const EDITABLE_JSON_FIELDS = ["categories", "tunnel", "points_a_verifier", "questionnaire_prefill"];
+const EDITABLE_JSON_FIELDS = [
+  "categories",
+  "tunnel",
+  "points_a_verifier",
+  "questionnaire_prefill",
+  "questionnaire_selection",
+];
 
 internalRouter.patch("/lieux/:id", (req, res) => {
   const row = db.prepare("SELECT * FROM lieux WHERE id = ?").get(req.params.id);
@@ -185,6 +233,10 @@ internalRouter.patch("/lieux/:id", (req, res) => {
   if (typeof req.body.premier_client_signe === "boolean") {
     sets.push("premier_client_signe = @premier_client_signe");
     params.premier_client_signe = req.body.premier_client_signe ? 1 : 0;
+  }
+  if (typeof req.body.questionnaire_valide === "boolean") {
+    sets.push("questionnaire_valide = @questionnaire_valide");
+    params.questionnaire_valide = req.body.questionnaire_valide ? 1 : 0;
   }
 
   if (sets.length === 0) return res.status(400).json({ error: "Aucun champ éditable fourni" });

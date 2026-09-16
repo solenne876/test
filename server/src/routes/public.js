@@ -12,7 +12,7 @@ import {
 
 export const publicRouter = express.Router();
 
-// Banque de questions statique — identique pour tous les lieux, servie à
+// Banque de questions statique - identique pour tous les lieux, servie à
 // part pour être mise en cache facilement côté navigateur.
 publicRouter.get("/question-bank", (req, res) => {
   res.json({ GENERAL_GROUPS, LIEU_BLOCKS, FORMAT_BLOCKS, FORMAT_EXCEPTIONS, REVEALS, G15_WARNING });
