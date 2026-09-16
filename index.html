@@ -412,6 +412,11 @@
 
   <div id="view-connaissance" hidden>
     <div class="panel">
+      <h2>Statut commercial</h2>
+      <p class="hint">Tant que le premier client n'est pas signé, toute proposition chiffrée est positionnée en tarif pilote (réduit vs la grille standard, en échange d'un témoignage et de contenu photo/vidéo).</p>
+      <label class="tag-check" style="display:inline-flex;"><input type="checkbox" id="kb-premier-client"> Premier client signé</label>
+    </div>
+    <div class="panel">
       <h2>Process commercial</h2>
       <p class="hint">Trame d'acquisition, délais indicatifs par catégorie, grille tarifaire — sert de référence au générateur de tunnel. Modifiable directement ici.</p>
       <textarea id="kb-process" class="kb-textarea"></textarea>
@@ -520,104 +525,199 @@
   VENUE_STATUSES.forEach(function(s){ VENUE_STATUS_COLOR[s.key] = s.color; });
 
   var SEED_PROCESS = [
-    "PROCESS COMMERCIAL KLEIOMNÉ — trame de prospection",
+    "Segments et tarifs de conception (hors cas pilote)",
     "",
-    "Étapes du tunnel, dans l'ordre. Toutes ne s'appliquent pas à tous les lieux : à adapter selon le profil (décisionnaire, lieu déjà scénarisé ou non, budget déjà mentionné...).",
+    "- Château / domaine patrimonial : conception 2 000-3 000€, pré-production 2 500-3 500€, présence terrain 600-700€, + licence de rejeu annuelle. Accompagnement annuel (« La Saison ») : 1 800-2 200€/mois, engagement 6 mois minimum, à proposer uniquement après un premier événement réussi.",
+    "- Restaurant à cadre patrimonial : conception/coordination 1 000-1 200€ première soirée, licence de rejeu 350-400€.",
+    "- Producteur artisanal modeste (distillerie, etc.) : 2 000€ pour une visite théâtralisée, 3 000€ pour une enquête immersive.",
+    "- Crêperie / lieu commercial modeste : conception 900-1 100€, licence de rejeu 300-400€.",
+    "- Cas pilote (tant que {{premier_client_signe}} est false) : appliquer une réduction sensible vs ces montants (de l'ordre de 40 à 60% selon le segment), en cohérence avec les précédents déjà posés (ex. 600-800€ pour un segment normalement à 1 000-1 200€).",
     "",
-    "1. Email 1 (premier contact) — J0.",
-    "2. Relance 1 — si pas de réponse, J+7 jours ouvrés (J+5 si ouverture/clic Mailsuite sans réponse).",
-    "3. Relance 2 — si toujours pas de réponse, J+7 jours ouvrés après la relance 1. Au-delà, statut « Sans réponse » ou « KO ».",
-    "4. Premier échange (téléphone ou visio) — sous 3 à 5 jours ouvrés après une réponse positive.",
-    "5. Visite du lieu — si pertinent et lieu accessible ; sous 1 à 3 semaines selon disponibilité. Peut être fusionnée avec le premier échange si le lieu est proche et disponible rapidement.",
-    "6. Évaluation des besoins — questionnaire découverte rempli pendant ou juste après la visite/l'échange.",
-    "7. Proposition chiffrée (devis) — sous 5 à 7 jours ouvrés après l'évaluation des besoins.",
-    "8. Validation / signature — délai très variable : propriétaire privé décide vite (1 à 3 semaines) ; collectivité, fondation ou groupe = cycle décisionnel long (1 à 3 mois).",
-    "9. Conception (concept narratif, scénario, direction artistique) — voir délais indicatifs par catégorie ci-dessous.",
-    "10. Recherche et briefing des prestataires (comédiens, traiteur, technique...) — en parallèle de la fin de la conception, 1 à 3 semaines.",
-    "11. Jour J — date fixée en amont avec le lieu.",
-    "12. Debrief — sous 1 semaine après l'événement.",
-    "13. Rejeu / proposition d'accompagnement annuel — dans les 2 à 4 semaines suivant le debrief, si le signal est positif (satisfaction, retombées mesurables).",
+    "Délais de conception par catégorie",
     "",
-    "⚠ Ces délais sont des points de départ à ajuster au fil des projets réels — à corriger directement dans cette fiche.",
+    "- Visite théâtralisée : 3-5 semaines (Spectacle) / 5-7 semaines (Immersion totale)",
+    "- Nocturne / visite aux chandelles : 3-4 semaines",
+    "- Dîner immersif : 4-6 semaines",
+    "- Murder party : 5-7 semaines",
+    "- Bal fantasy : 6-8 semaines",
+    "- Enquête immersive / jeu de piste : 3-4 semaines",
+    "- Événement ponctuel : variable, à cadrer au cas par cas",
     "",
-    "DÉLAIS DE CONCEPTION INDICATIFS PAR CATÉGORIE (étape 9, de la validation à la livraison du concept) :",
-    "- Visite théâtralisée : 2 à 3 semaines (formule Spectacle) / 3 à 4 semaines (Immersion totale).",
-    "- Nocturne / Visite aux chandelles : 2 à 3 semaines.",
-    "- Dîner immersif : 3 à 4 semaines (coordination traiteur incluse).",
-    "- Murder party : 3 à 5 semaines (écriture des rôles et objectifs individuels si Immersion totale).",
-    "- Bal fantasy : 3 à 5 semaines.",
-    "- Enquête immersive / jeu de piste narratif : 3 à 5 semaines.",
-    "- Événement ponctuel (Halloween, Pâques, Noël) : 2 à 3 semaines (déclinaison allégée d'un format existant) ou délai du format d'origine si créé pour l'occasion.",
-    "",
-    "GRILLE TARIFAIRE (pilier + add-ons) :",
-    "- Pilier central — scénarisation d'un événement immersif (un des 7 formats) : sur devis, généralement 2 500 € à 4 000 €. Formule Spectacle en bas de fourchette (grand groupe, prix par personne plus bas) ; formule Immersion totale en haut (groupe restreint, rôles individuels, prix par personne plus élevé). Varie aussi selon la taille du lieu et le nombre de participants.",
-    "- Storytelling (add-on, uniquement si le questionnaire révèle une matière narrative exploitable) : Socle 1 200 € (tarif de lancement, 3 premiers clients) puis 1 800 € (tarif de croisière). Inclut charte narrative courte, page « Histoire », un format ancré dans le lieu.",
-    "- Autres add-ons (direction artistique/moodboard dédié, supports imprimés écrits « en diégèse » — invitations, menus, programme —, brief scénaristique pour les prestataires du lieu, supervision narrative le jour J) : 400 à 800 € selon complexité, à l'unité ou combinés.",
-    "- Accompagnement annuel « La Saison » (upsell proposé après un premier événement réussi, jamais en entrée de tunnel) : 1 800 à 2 200 €/mois, engagement 6 mois minimum.",
-    "",
-    "⚠ Tarifs à confirmer/ajuster par Solenne au fil de l'activité — base de départ issue des notes stratégiques Kleiomné."
+    "Étapes types du tunnel (à adapter, ne pas forcer toutes les étapes si certaines ne s'appliquent pas à ce lieu précis) : mail de prospection → relance(s) écrites → questionnaire découverte rempli → évaluation des besoins → visite du lieu (si pertinent) → proposition chiffrée → validation → conception → recherche et briefing des prestataires → jour J → debrief et collecte de contenu → proposition de rejeu (uniquement si le premier événement s'est bien passé)."
   ].join("\n");
 
   var SEED_QUESTIONNAIRE = [
-    "QUESTIONNAIRE DÉCOUVERTE KLEIOMNÉ — tronc commun + branches",
+    "Structure en 3 blocs : un socle général posé à tout prospect, puis une grille conditionnelle selon le type de lieu, puis une grille conditionnelle selon le format d'événement pressenti. Périmètre actuel du questionnaire écrit : type de lieu = château/manoir (L-CH) ou domaine viticole (L-DOM) uniquement. Format des IDs : G = général, L-xx = lieu, F-xx = format. Type de question entre parenthèses : QO (ouverte), QF (fermée/choix), QE (échelle).",
     "",
-    "Objectif : qualifier le lieu et orienter vers un format d'événement et une formule (Spectacle ou Immersion totale). Si une réponse est déjà connue grâce à la recherche (site officiel, réseaux sociaux, Gmail...), la reformuler en confirmation plutôt que la reposer à l'aveugle.",
+    "Bloc 1 — Général (tout prospect)",
     "",
-    "TRONC COMMUN (tout lieu) :",
-    "1. Qui décide pour ce lieu ? (propriétaire nommé / gérant-commercial / structure ou groupe / collectivité-fondation)",
-    "2. Le lieu a-t-il déjà organisé des événements thématiques ou immersifs ? Lesquels, avec quel retour ?",
-    "3. Capacité d'accueil (nombre de personnes max, intérieur et extérieur)",
-    "4. Espaces mobilisables pour un événement (salle, jardin, cour, cave...) et contraintes (accès, horaires, sécurité incendie, voisinage)",
-    "5. Saisonnalité du lieu : période creuse à animer en priorité ? période pleine à éviter ?",
-    "6. Budget envisagé, ou fourchette",
-    "7. Objectif principal recherché (remplir un créneau creux, se différencier, image de marque, fidéliser un public, tester avant un accompagnement annuel...)",
-    "8. Y a-t-il une histoire, une légende ou des personnages liés au lieu ? (matière potentielle pour l'add-on storytelling)",
-    "9. Qui signe, et sous quel délai ? Un budget est-il déjà voté ?",
+    "Identité et histoire du lieu",
+    "- G01 (QF) Cette histoire est-elle déjà racontée quelque part (site, brochure, visite guidée) ? Oui / Non / Partiellement",
+    "- G02 (QO) Y a-t-il un personnage, un événement historique ou une anecdote peu exploitée que vous aimeriez mettre en avant ?",
+    "- G03 (QO) Comment gérez-vous votre identité de marque/communication ?",
     "",
-    "BRANCHE PROFIL DE LIEU (selon le type identifié) :",
-    "- Château / domaine patrimonial : monument classé ou inscrit ? contraintes des Architectes des Bâtiments de France ? propriétaire résident sur place ? statut privé / public / fondation ?",
-    "- Restaurant / bar à thème : identité visuelle ou thématique déjà en place ? profil de la clientèle actuelle (habituée, touristique, événementielle) ? jours/heures disponibles pour un événement dédié ?",
-    "- Lieu producteur (domaine viticole, distillerie...) : propose-t-il déjà des visites ou ateliers ? volonté de mettre en scène le savoir-faire/la production dans l'expérience ?",
+    "Activité actuelle",
+    "- G04 (QO) Quelle est votre activité principale aujourd'hui ?",
+    "- G05 (QO) Avez-vous déjà accueilli des animations ou événements à thème ? Lesquels ?",
+    "- G06 (QO) Qu'est-ce qui a bien fonctionné, et qu'est-ce qui a déçu, dans vos expériences passées avec des prestataires ?",
+    "- G07 (QF) Travaillez-vous déjà avec des partenaires réguliers (traiteurs, décorateurs, troupes) ?",
+    "- G08 (QO) Quelle est votre fréquentation actuelle, et comment varie-t-elle selon les saisons ?",
     "",
-    "QUESTION TRANSVERSALE CLÉ (aiguillage formule) :",
-    "« Préférez-vous un format accueillant un grand nombre de participants de façon plus spectaculaire (formule Spectacle), ou une expérience resserrée où chaque participant a un rôle actif (formule Immersion totale) ? »",
+    "Public et clientèle",
+    "- G09 (QO) Qui est votre clientèle actuelle ?",
+    "- G10 (QO) Souhaitez-vous toucher un nouveau public avec ce type d'événement, ou fidéliser l'existant ?",
     "",
-    "BRANCHES PAR CATÉGORIE (ne poser que les questions des catégories envisagées) :",
+    "Objectifs et motivations",
+    "- G11 (QO) Qu'est-ce qui vous a donné envie d'explorer ce type d'expérience aujourd'hui ?",
+    "- G12 (QF) Voyez-vous ça comme un événement ponctuel ou comme une nouvelle offre récurrente ?",
+    "- G13 (QO) Avez-vous une échéance précise en tête (inauguration, anniversaire du lieu, ouverture de saison) ?",
     "",
-    "Visite théâtralisée :",
-    "- Parcours possible dans le lieu (itinéraire, temps de déplacement entre les points) ?",
-    "- Combien de « stations »/pièces mobilisables pour scander la visite ?",
-    "- Le lieu a-t-il déjà des guides ou comédiens formés pouvant être mobilisés ?",
+    "Cadre pratique et contraintes",
+    "- G14 (QO) Quelle est votre capacité d'accueil en intérieur et en extérieur ?",
+    "- G15 (QF) Le lieu est-il classé ou protégé, avec des contraintes particulières (bruit, feu, structures) ?",
+    "- G16 (QF) Avez-vous du personnel disponible le jour J, ou faut-il tout externaliser ?",
     "",
-    "Nocturne / Visite aux chandelles :",
-    "- L'éclairage électrique peut-il être coupé la nuit ?",
-    "- Usage de bougies/flammes autorisé (contraintes sécurité incendie) ?",
-    "- Accès nocturne au lieu autorisé ?",
+    "Budget et décision",
+    "- G17 (QO) Avez-vous déjà une enveloppe budgétaire en tête, ou souhaitez-vous une proposition selon le format ?",
     "",
-    "Dîner immersif :",
-    "- Cuisine/traiteur sur place, ou prestataire à faire venir ?",
-    "- Capacité de la salle à manger scénarisable ?",
-    "- Contraintes de menu/allergènes à anticiper ?",
+    "Vision et ambition",
+    "- G18 (QF) Si ça fonctionne bien, imaginez-vous reconduire l'expérience plusieurs fois par an ?",
+    "- G19 (QF) Seriez-vous ouvert à ce que l'événement serve aussi de vitrine pour attirer d'autres types de clients (privatisations, entreprises) ?",
+    "- G20 (QO) Avez-vous des freins ou réticences que vous anticipez déjà ?",
     "",
-    "Murder party :",
-    "- Salons ou pièces cloisonnées disponibles pour des sous-groupes ?",
-    "- Matériel d'enquête envisageable (indices physiques, accessoires) ?",
+    "Bloc 2 — Selon le type de lieu",
     "",
-    "Bal fantasy :",
-    "- Grande salle de bal ou équivalent disponible ?",
-    "- Sonorisation déjà en place ?",
-    "- Dress code ou tenue déjà souhaité(e) par le lieu ?",
+    "L-CH — Château / manoir / demeure historique",
+    "- L-CH1 (QF) Le château est-il habité à l'année par la famille propriétaire, ou uniquement ouvert lors d'événements ?",
+    "- L-CH2 (QO) Quelles pièces intérieures sont ouvertes ou pourraient être ouvertes à un événement (salons, grande salle, cuisines d'époque, caves) ?",
+    "- L-CH3 (QO) Quels espaces extérieurs sont exploitables (cour d'honneur, jardins à la française, parc, dépendances, orangerie) ?",
+    "- L-CH4 (QF) Y a-t-il des espaces actuellement fermés au public que vous seriez prêts à ouvrir pour une expérience immersive ?",
+    "- L-CH5 (QF) Existe-t-il un parcours de visite déjà balisé ? → si Oui : L-CH6 (QO) Seriez-vous prêts à nous transmettre les documents associés (trame du parcours, script du guide, fiches historiques) pour qu'on s'appuie dessus plutôt que de repartir de zéro ?",
+    "- L-CH7 (QF) Avez-vous une saison touristique marquée (ouverture d'avril à octobre par exemple) ou une activité toute l'année ?",
+    "- L-CH8 (QO) Voyez-vous ce type d'événement comme un moyen de financer l'entretien du bâti sur le long terme ?",
     "",
-    "Enquête immersive / jeu de piste narratif :",
-    "- Superficie parcourable, présence d'un extérieur (jardin, parc) ?",
-    "- Niveau de mobilité requis pour les participants (accessibilité PMR à anticiper) ?",
+    "L-DOM — Domaine viticole / producteur artisanal",
+    "- L-DOM1 (QO) Quel est le produit phare à mettre en valeur (cuvée, recette, savoir-faire) ?",
+    "- L-DOM2 (QF) Avez-vous déjà un espace dédié à la dégustation ou à la réception de groupes ? Oui / Non",
+    "- L-DOM3 (QO) Y a-t-il une saisonnalité de production à respecter (vendanges, distillation) qui contraint les dates possibles ?",
     "",
-    "Événement ponctuel (Halloween, Pâques, Noël) :",
-    "- Le lieu a-t-il déjà une tradition sur cette période ?",
-    "- Contraintes de dates fixes (jours fériés, autres événements déjà prévus) ?",
+    "Bloc 3 — Selon le format d'événement pressenti",
     "",
-    "⚠ Questionnaire de départ à ajuster par Solenne — les questions déjà répondues par la recherche automatique sont reformulées en confirmation par le générateur plutôt que reposées."
+    "F-VIS — Visite théâtralisée / nocturne aux chandelles",
+    "- F-VIS1 (QO) Le parcours doit-il suivre un circuit déjà existant, ou peut-on en imaginer un nouveau librement ? Avez-vous des préférences ?",
+    "- F-VIS2 (QO) Combien de comédiens seriez-vous prêts à accueillir sur le lieu en simultané ?",
+    "- F-VIS3 (QF) Préférez-vous une visite fidèle à l'histoire réelle du lieu (rigueur historique), ou êtes-vous ouverts à une scénarisation plus libre/fictionnalisée même si elle s'éloigne des faits ?",
+    "",
+    "F-DIN — Dîner immersif",
+    "- F-DIN1 (QO) Combien de couverts maximum votre espace de restauration peut-il accueillir ?",
+    "- F-DIN2 (QF) Disposez-vous d'une cuisine sur place, ou faut-il prévoir un traiteur externe ? → si cuisine sur place : F-DIN3 (QF) Votre équipe peut-elle absorber un menu à thème sans perturber son fonctionnement habituel ?",
+    "- F-DIN4 (QF) Avez-vous déjà un traiteur partenaire ?",
+    "- F-DIN5 (QF) Le public doit-il jouer un rôle actif (murder party à table, énigme entre les plats) ou rester spectateur d'une mise en scène ?",
+    "- F-DIN6 (QO) Combien de temps souhaitez-vous que dure l'événement dans son ensemble (accueil compris) ?",
+    "- F-DIN7 (QO) Y a-t-il des moments du dîner que vous souhaitez sanctuariser sans animation (ex. discours, remise de prix) ?",
+    "- F-DIN8 (QO) Quelle est la fourchette de prix habituelle de vos dîners ou soirées, pour caler le positionnement du menu à thème ?",
+    "- F-DIN9 (QF) Voyez-vous ce format comme un événement ponctuel ou une soirée à thème récurrente ?",
+    "- F-DIN10 (QF) Souhaitez-vous un dîner thématisé ou scénarisé ?",
+    "",
+    "F-MUR — Murder party",
+    "- F-MUR1 (QF) Disposez-vous d'un espace fermé permettant un huis clos (une ou plusieurs pièces communicantes) ?",
+    "- F-MUR2 (QF) Y a-t-il plusieurs petites pièces annexes utilisables pour des apartés/interrogatoires entre joueurs ?",
+    "- F-MUR3 (QF) L'espace permet-il de moduler l'éclairage pour une ambiance tamisée/mystérieuse ?",
+    "- F-MUR4 (QF) Quelle jauge visez-vous ? Petit groupe (plus d'interactivité) ou plus grand groupe (façon pièce de théâtre immersive) ?",
+    "- F-MUR5 (QO) Quel est votre objectif en termes de régularité du format ?",
+    "- F-MUR6 (QF, si petit groupe) Le public doit-il incarner des personnages avec des costumes fournis, ou vient-il déjà déguisé ?",
+    "- F-MUR7 (QF, si petit groupe) Souhaitez-vous que les participants découvrent leur rôle avant l'événement (en amont par mail) ou sur place ?",
+    "- F-MUR8 (QO) Combien de comédiens/meneurs de jeu seriez-vous prêts à accueillir pour encadrer l'intrigue ?",
+    "- F-MUR9 (QF) L'intrigue doit-elle s'inspirer d'un fait réel ou d'un personnage ayant existé dans l'histoire du lieu, ou préférez-vous une intrigue totalement fictive ?",
+    "- F-MUR10 (QF) Voyez-vous ce format comme un événement ponctuel ou une offre récurrente ?",
+    "",
+    "F-BAL — Bal fantasy",
+    "Hors périmètre du questionnaire écrit standard : ce format se qualifie par appel direct (exception assumée, voir règle 1), avec un questionnaire sur mesure construit au cas par cas pendant l'appel.",
+    "",
+    "F-ENQ — Enquête immersive / jeu de piste narratif",
+    "- F-ENQ1 (QO) Y a-t-il des éléments déjà présents sur le lieu (objets, inscriptions, architecture) pouvant servir de vrais indices dans l'enquête ?",
+    "- F-ENQ2 (QF) L'enquête doit-elle s'appuyer sur un mystère réel lié à l'histoire du lieu, ou préférez-vous une intrigue totalement fictive ?",
+    "- F-ENQ3 (QO) Y a-t-il un objet, un trésor ou un secret emblématique du lieu à utiliser comme fil rouge de l'enquête ?",
+    "- F-ENQ4 (QF) Format en petits groupes mêlant comédiens et indices physiques nombreux (plus interactif, plus lourd, permet une vraie récurrence), ou format façon pièce de théâtre immersive avec surtout des comédiens et des indices physiques légers (plus simple, ponctuel ou régulier) ?",
+    "- F-ENQ5 (QO) Y a-t-il un âge minimum ou une cible privilégiée (familles avec enfants, adultes, groupes d'entreprise) ?",
+    "- F-ENQ6 (QF) Animation ponctuelle, ou expérience permanente proposée toute la saison (comme un escape game fixe) ?",
+    "- F-ENQ7 (QO) Quel tarif par personne ou par équipe envisagez-vous ?",
+    "",
+    "F-PON — Événement ponctuel (anniversaire du lieu, inauguration, etc.)",
+    "Hors périmètre du questionnaire écrit standard : ce format se traite sur devis au cas par cas."
   ].join("\n");
+
+  var QUESTION_BANK = {
+    G01: "(QF) Cette histoire est-elle déjà racontée quelque part (site, brochure, visite guidée) ? Oui / Non / Partiellement",
+    G02: "(QO) Y a-t-il un personnage, un événement historique ou une anecdote peu exploitée que vous aimeriez mettre en avant ?",
+    G03: "(QO) Comment gérez-vous votre identité de marque/communication ?",
+    G04: "(QO) Quelle est votre activité principale aujourd'hui ?",
+    G05: "(QO) Avez-vous déjà accueilli des animations ou événements à thème ? Lesquels ?",
+    G06: "(QO) Qu'est-ce qui a bien fonctionné, et qu'est-ce qui a déçu, dans vos expériences passées avec des prestataires ?",
+    G07: "(QF) Travaillez-vous déjà avec des partenaires réguliers (traiteurs, décorateurs, troupes) ?",
+    G08: "(QO) Quelle est votre fréquentation actuelle, et comment varie-t-elle selon les saisons ?",
+    G09: "(QO) Qui est votre clientèle actuelle ?",
+    G10: "(QO) Souhaitez-vous toucher un nouveau public avec ce type d'événement, ou fidéliser l'existant ?",
+    G11: "(QO) Qu'est-ce qui vous a donné envie d'explorer ce type d'expérience aujourd'hui ?",
+    G12: "(QF) Voyez-vous ça comme un événement ponctuel ou comme une nouvelle offre récurrente ?",
+    G13: "(QO) Avez-vous une échéance précise en tête (inauguration, anniversaire du lieu, ouverture de saison) ?",
+    G14: "(QO) Quelle est votre capacité d'accueil en intérieur et en extérieur ?",
+    G15: "(QF) Le lieu est-il classé ou protégé, avec des contraintes particulières (bruit, feu, structures) ?",
+    G16: "(QF) Avez-vous du personnel disponible le jour J, ou faut-il tout externaliser ?",
+    G17: "(QO) Avez-vous déjà une enveloppe budgétaire en tête, ou souhaitez-vous une proposition selon le format ?",
+    G18: "(QF) Si ça fonctionne bien, imaginez-vous reconduire l'expérience plusieurs fois par an ?",
+    G19: "(QF) Seriez-vous ouvert à ce que l'événement serve aussi de vitrine pour attirer d'autres types de clients (privatisations, entreprises) ?",
+    G20: "(QO) Avez-vous des freins ou réticences que vous anticipez déjà ?",
+    "L-CH1": "(QF) Le château est-il habité à l'année par la famille propriétaire, ou uniquement ouvert lors d'événements ?",
+    "L-CH2": "(QO) Quelles pièces intérieures sont ouvertes ou pourraient être ouvertes à un événement (salons, grande salle, cuisines d'époque, caves) ?",
+    "L-CH3": "(QO) Quels espaces extérieurs sont exploitables (cour d'honneur, jardins à la française, parc, dépendances, orangerie) ?",
+    "L-CH4": "(QF) Y a-t-il des espaces actuellement fermés au public que vous seriez prêts à ouvrir pour une expérience immersive ?",
+    "L-CH5": "(QF) Existe-t-il un parcours de visite déjà balisé ?",
+    "L-CH6": "(QO, si Oui à L-CH5) Seriez-vous prêts à nous transmettre les documents associés (trame du parcours, script du guide, fiches historiques) pour qu'on s'appuie dessus plutôt que de repartir de zéro ?",
+    "L-CH7": "(QF) Avez-vous une saison touristique marquée (ouverture d'avril à octobre par exemple) ou une activité toute l'année ?",
+    "L-CH8": "(QO) Voyez-vous ce type d'événement comme un moyen de financer l'entretien du bâti sur le long terme ?",
+    "L-DOM1": "(QO) Quel est le produit phare à mettre en valeur (cuvée, recette, savoir-faire) ?",
+    "L-DOM2": "(QF) Avez-vous déjà un espace dédié à la dégustation ou à la réception de groupes ? Oui / Non",
+    "L-DOM3": "(QO) Y a-t-il une saisonnalité de production à respecter (vendanges, distillation) qui contraint les dates possibles ?",
+    "F-VIS1": "(QO) Le parcours doit-il suivre un circuit déjà existant, ou peut-on en imaginer un nouveau librement ? Avez-vous des préférences ?",
+    "F-VIS2": "(QO) Combien de comédiens seriez-vous prêts à accueillir sur le lieu en simultané ?",
+    "F-VIS3": "(QF) Préférez-vous une visite fidèle à l'histoire réelle du lieu (rigueur historique), ou êtes-vous ouverts à une scénarisation plus libre/fictionnalisée même si elle s'éloigne des faits ?",
+    "F-DIN1": "(QO) Combien de couverts maximum votre espace de restauration peut-il accueillir ?",
+    "F-DIN2": "(QF) Disposez-vous d'une cuisine sur place, ou faut-il prévoir un traiteur externe ?",
+    "F-DIN3": "(QF, si cuisine sur place) Votre équipe peut-elle absorber un menu à thème sans perturber son fonctionnement habituel ?",
+    "F-DIN4": "(QF) Avez-vous déjà un traiteur partenaire ?",
+    "F-DIN5": "(QF) Le public doit-il jouer un rôle actif (murder party à table, énigme entre les plats) ou rester spectateur d'une mise en scène ?",
+    "F-DIN6": "(QO) Combien de temps souhaitez-vous que dure l'événement dans son ensemble (accueil compris) ?",
+    "F-DIN7": "(QO) Y a-t-il des moments du dîner que vous souhaitez sanctuariser sans animation (ex. discours, remise de prix) ?",
+    "F-DIN8": "(QO) Quelle est la fourchette de prix habituelle de vos dîners ou soirées, pour caler le positionnement du menu à thème ?",
+    "F-DIN9": "(QF) Voyez-vous ce format comme un événement ponctuel ou une soirée à thème récurrente ?",
+    "F-DIN10": "(QF) Souhaitez-vous un dîner thématisé ou scénarisé ?",
+    "F-MUR1": "(QF) Disposez-vous d'un espace fermé permettant un huis clos (une ou plusieurs pièces communicantes) ?",
+    "F-MUR2": "(QF) Y a-t-il plusieurs petites pièces annexes utilisables pour des apartés/interrogatoires entre joueurs ?",
+    "F-MUR3": "(QF) L'espace permet-il de moduler l'éclairage pour une ambiance tamisée/mystérieuse ?",
+    "F-MUR4": "(QF) Quelle jauge visez-vous ? Petit groupe (plus d'interactivité) ou plus grand groupe (façon pièce de théâtre immersive) ?",
+    "F-MUR5": "(QO) Quel est votre objectif en termes de régularité du format ?",
+    "F-MUR6": "(QF, si petit groupe) Le public doit-il incarner des personnages avec des costumes fournis, ou vient-il déjà déguisé ?",
+    "F-MUR7": "(QF, si petit groupe) Souhaitez-vous que les participants découvrent leur rôle avant l'événement (en amont par mail) ou sur place ?",
+    "F-MUR8": "(QO) Combien de comédiens/meneurs de jeu seriez-vous prêts à accueillir pour encadrer l'intrigue ?",
+    "F-MUR9": "(QF) L'intrigue doit-elle s'inspirer d'un fait réel ou d'un personnage ayant existé dans l'histoire du lieu, ou préférez-vous une intrigue totalement fictive ?",
+    "F-MUR10": "(QF) Voyez-vous ce format comme un événement ponctuel ou une offre récurrente ?",
+    "F-ENQ1": "(QO) Y a-t-il des éléments déjà présents sur le lieu (objets, inscriptions, architecture) pouvant servir de vrais indices dans l'enquête ?",
+    "F-ENQ2": "(QF) L'enquête doit-elle s'appuyer sur un mystère réel lié à l'histoire du lieu, ou préférez-vous une intrigue totalement fictive ?",
+    "F-ENQ3": "(QO) Y a-t-il un objet, un trésor ou un secret emblématique du lieu à utiliser comme fil rouge de l'enquête ?",
+    "F-ENQ4": "(QF) Format en petits groupes mêlant comédiens et indices physiques nombreux (plus interactif, plus lourd, permet une vraie récurrence), ou format façon pièce de théâtre immersive avec surtout des comédiens et des indices physiques légers (plus simple, ponctuel ou régulier) ?",
+    "F-ENQ5": "(QO) Y a-t-il un âge minimum ou une cible privilégiée (familles avec enfants, adultes, groupes d'entreprise) ?",
+    "F-ENQ6": "(QF) Animation ponctuelle, ou expérience permanente proposée toute la saison (comme un escape game fixe) ?",
+    "F-ENQ7": "(QO) Quel tarif par personne ou par équipe envisagez-vous ?"
+  };
+
+  var LIEU_TYPES = [
+    { key: "chateau_manoir", label: "Château / manoir" },
+    { key: "domaine_viticole", label: "Domaine viticole / producteur artisanal" },
+    { key: "autre", label: "Autre (hors périmètre du questionnaire standard)" }
+  ];
+  var LIEU_TYPE_LABEL = {};
+  LIEU_TYPES.forEach(function(t){ LIEU_TYPE_LABEL[t.key] = t.label; });
 
   var SEED = [
     { venue:"La Roseraie de Provins", email:"laroseraiedeprovins@gmail.com", segment:"Jardin patrimonial", date:"2026-09-14", status:"Envoyé", note:"", opensCount:0, opensLast:null },
@@ -641,7 +741,7 @@
    "view-tunnels","view-connaissance","venue-search","btn-add-venue","btn-export-venues","venue-add-panel",
    "v-name","v-email","v-phone","v-cats","btn-cancel-venue","btn-save-venue",
    "venue-count","venue-cards","venue-overlay","venue-modal","venue-body","venue-close",
-   "kb-process","kb-questionnaire","btn-save-kb","kb-save-status"
+   "kb-process","kb-questionnaire","kb-premier-client","btn-save-kb","kb-save-status"
   ].forEach(function(id){ els[id.replace(/-([a-z])/g, function(_,c){return c.toUpperCase();})] = document.getElementById(id); });
 
   var state = {
@@ -658,7 +758,7 @@
     relanceGenerating: null,
     venues: [],
     venueSearch: "",
-    kb: { processCommercial: SEED_PROCESS, questionnaireBase: SEED_QUESTIONNAIRE },
+    kb: { processCommercial: SEED_PROCESS, questionnaireBase: SEED_QUESTIONNAIRE, premierClientSigne: false },
     openVenueId: null,
     venueGenerating: null,
     venueGmailSearching: null
@@ -802,7 +902,7 @@
     var vdata = localLoadVenues();
     state.venues = Object.keys(vdata).map(function(id){ return vdata[id]; });
     var kbData = localLoadKb();
-    if(kbData) state.kb = kbData; else localSaveKb(state.kb);
+    if(kbData) state.kb = Object.assign({ premierClientSigne: false }, kbData); else localSaveKb(state.kb);
     renderAll();
     store.localAdd = function(payload){
       var data = localLoad();
@@ -878,7 +978,11 @@
     db.doc("meta/kb").onSnapshot(function(doc){
       var data = doc && doc.exists ? doc.data() : null;
       if(data && (data.processCommercial || data.questionnaireBase)){
-        state.kb = { processCommercial: data.processCommercial || SEED_PROCESS, questionnaireBase: data.questionnaireBase || SEED_QUESTIONNAIRE };
+        state.kb = {
+          processCommercial: data.processCommercial || SEED_PROCESS,
+          questionnaireBase: data.questionnaireBase || SEED_QUESTIONNAIRE,
+          premierClientSigne: !!data.premierClientSigne
+        };
       } else {
         db.doc("meta/kb").set(state.kb).catch(function(){});
       }
@@ -1493,11 +1597,13 @@
       contactPhone: els.vPhone.value.trim(),
       categories: cats,
       formule: "",
+      lieuType: "",
       status: "Brouillon",
       gmailSummary: "",
       researchNotes: "",
       tunnel: [],
-      questionnaire: []
+      questionnaire: [],
+      pointsAVerifier: []
     }, function(id){
       els.venueAddPanel.hidden = true;
       if(id) openVenueDetail(id);
@@ -1569,33 +1675,100 @@
     return lines.join("\n");
   }
 
-  var CATEGORY_KEYS_LIST = CATEGORIES.map(function(c){ return c.key; }).join(", ");
+  function fillPlaceholders(str, vars){
+    Object.keys(vars).forEach(function(k){
+      str = str.split("{{" + k + "}}").join(vars[k]);
+    });
+    return str;
+  }
 
   function buildTunnelPrompt(v){
     var lines = [];
-    lines.push("Tu génères un tunnel de prospection sur mesure et un questionnaire découverte adapté pour Solenne, fondatrice de Kleiomné, une agence qui conçoit des expériences narratives immersives pour des lieux à forte identité patrimoniale ou thématique.");
+    lines.push("Tu es l'assistant interne de Kleiomné, une agence qui conçoit des expériences narratives immersives pour des lieux à fort patrimoine (châteaux, manoirs, domaines, producteurs artisanaux, lieux commerciaux à cadre historique). Ton rôle est de générer, pour un lieu donné, un tunnel de prospection réaliste avec des estimations de timing et de budget, ainsi qu'un questionnaire découverte adapté.");
     lines.push("");
-    lines.push("Base-toi strictement sur les deux documents de référence ci-dessous (process commercial et questionnaire découverte) : reprends leurs étapes, délais et tarifs plutôt que d'en inventer de nouveaux, et adapte-les au lieu précis décrit plus bas (ne garde que les étapes et questions pertinentes pour ce lieu).");
+    lines.push("Règles impératives, non négociables");
     lines.push("");
-    lines.push("=== PROCESS COMMERCIAL (référence) ===");
+    lines.push("1. Jamais d'appel non planifié par défaut. Le premier contact et les relances doivent toujours privilégier l'écrit (mail avec questionnaire découverte à remplir). Ne propose un appel ou une visio que si le prospect l'a explicitement demandé dans les échanges déjà connus, ou en toute dernière option après plusieurs relances écrites restées sans réponse. Ne jamais écrire \"basculer sur un appel\" comme étape par défaut. Exception assumée : le format Bal fantasy (F-BAL) est trop complexe à cadrer par questionnaire écrit standard ; pour cette catégorie uniquement, un appel qualifié fait partie du tunnel normal, à mentionner explicitement comme exception justifiée par la complexité du format, pas comme un choix par défaut généralisable aux autres catégories.");
+    lines.push("2. Tarif pilote tant qu'aucun premier client n'est signé. Tant que la variable {{premier_client_signe}} est false, toute proposition chiffrée doit être positionnée en cas pilote : tarif réduit vs la grille standard, en échange d'un témoignage et de contenu photo/vidéo. Ne jamais proposer le tarif plein par défaut dans cette période, quelle que soit la taille ou le prestige du lieu.");
+    lines.push("3. Distinguer les faits confirmés des déductions. Pour chaque information utilisée dans le tunnel (identité du décisionnaire, lien de parenté, historique du lieu, budget supposé), indique son statut : confirmé (dit explicitement par le prospect ou trouvé sur une source officielle du lieu), ou à vérifier (déduit, trouvé sur une source tierce, ou hérité d'une conversation passée non reconfirmée). Ne jamais présenter une déduction comme un fait acquis dans le questionnaire ou dans un mail généré à partir du tunnel.");
+    lines.push("4. Relance à 5 jours ouvrés par défaut. Sauf si un délai différent a été explicitement convenu avec ce prospect (ex. mentionné dans un échange déjà retrouvé), le seuil de relance est de 5 jours ouvrés après un mail resté sans réponse, ou 3 jours ouvrés si une ouverture/clic a été détecté.");
+    lines.push("5. Ne jamais halluciner un tarif ou un délai précis sans base. Si le lieu ne correspond à aucun des segments connus (voir grille ci-dessous), donne une fourchette large et signale explicitement l'incertitude plutôt que d'inventer un chiffre pseudo-précis.");
+    lines.push("");
+    lines.push("Base de connaissance à utiliser pour estimer budget et timing");
+    lines.push("");
     lines.push(state.kb.processCommercial || SEED_PROCESS);
     lines.push("");
-    lines.push("=== QUESTIONNAIRE DÉCOUVERTE (référence) ===");
+    lines.push("Banque de questions découverte (avec IDs et logique de déclenchement)");
+    lines.push("");
     lines.push(state.kb.questionnaireBase || SEED_QUESTIONNAIRE);
     lines.push("");
-    lines.push("=== LE LIEU ===");
-    lines.push("Nom : " + (v.name || "(non renseigné)"));
-    lines.push("Contact : " + (v.contactEmail || v.contactPhone || "non renseigné"));
-    lines.push("Catégorie(s) envisagée(s) : " + ((v.categories&&v.categories.length) ? v.categories.map(function(k){ return CATEGORY_LABEL[k]||k; }).join(", ") : "aucune fournie — à suggérer toi-même à partir des informations ci-dessous"));
-    lines.push("Catégories valides (utilise exactement ces clés dans \"suggestedCategories\") : " + CATEGORY_KEYS_LIST);
-    if(v.gmailSummary){ lines.push(""); lines.push("Historique Gmail avec ce contact :"); lines.push(v.gmailSummary.slice(0,3000)); }
-    if(v.researchNotes){ lines.push(""); lines.push("Informations recueillies (recherche web + conversations passées) :"); lines.push(v.researchNotes.slice(0,6000)); }
+    lines.push("Logique de déclenchement");
     lines.push("");
-    lines.push("Réponds uniquement avec un objet JSON de cette forme exacte, sans aucun texte avant ni après :");
-    lines.push('{"suggestedCategories": ["..."], "tunnel": [{"step": "...", "timing": "...", "budget": "...", "notes": "..."}], "questionnaire": [{"section": "...", "questions": ["...", "..."]}]}');
+    lines.push("- G01 = Non ou Partiellement → proposer l'add-on charte narrative dans la proposition chiffrée");
+    lines.push("- G15 = Oui (classé/protégé) → filtrer les formats/options nécessitant du feu, de la musique amplifiée ou des structures temporaires, et le signaler explicitement dans points_a_verifier");
+    lines.push("- Catégorie envisagée = Bal fantasy → basculer sur le tunnel avec appel qualifié (exception), pas sur le questionnaire écrit");
+    lines.push("- Catégorie envisagée = Événement ponctuel → traiter sur devis au cas par cas, ne pas forcer une branche F-xx standard");
     lines.push("");
-    lines.push("Consignes : le tunnel ne doit contenir que les étapes pertinentes pour ce lieu précis (pas forcément les 13 étapes génériques du process), avec un timing estimé pour chacune et, si pertinent à ce stade, une fourchette budgétaire (laisser \"budget\" vide si non pertinent à cette étape). Le questionnaire doit reprendre le tronc commun, la branche profil de lieu adaptée, et les branches des catégories envisagées ; si une information est déjà connue via l'historique Gmail ou les informations recueillies, reformule la question correspondante en confirmation plutôt que de la reposer à l'aveugle. \"suggestedCategories\" ne doit contenir des valeurs que si aucune catégorie n'a été fournie par Solenne ci-dessus : sinon renvoie un tableau vide.");
-    return lines.join("\n");
+    lines.push("Ce que tu reçois en entrée");
+    lines.push("");
+    lines.push("- Nom du lieu et contact : {{lieu}} / {{contact}}");
+    lines.push("- Catégorie(s) d'événement envisagée(s) : {{categories}}");
+    lines.push("- Informations recueillies (web, conversations Claude passées, Gmail) : {{infos_recueillies}}");
+    lines.push("- Historique des échanges déjà eus avec ce prospect, s'il y en a : {{historique_echanges}}");
+    lines.push("- Statut premier client signé : {{premier_client_signe}}");
+    lines.push("");
+    lines.push("Format de sortie attendu");
+    lines.push("Réponds uniquement en JSON structuré, sans texte autour, avec ce schéma :");
+    lines.push("");
+    lines.push('{');
+    lines.push('  "profil_lieu_deduit": {');
+    lines.push('    "type": "chateau_manoir | domaine_viticole | autre (hors périmètre questionnaire standard)",');
+    lines.push('    "statut": "confirmé | à vérifier",');
+    lines.push('    "justification": "1 phrase"');
+    lines.push('  },');
+    lines.push('  "tunnel": [');
+    lines.push('    {');
+    lines.push('      "etape": "nom de l\'étape",');
+    lines.push('      "timing_estime": "ex. 5 jours ouvrés",');
+    lines.push('      "budget_estime": "ex. 800-1000€ ou null si non applicable à cette étape",');
+    lines.push('      "statut_budget": "confirmé | estimé | à vérifier",');
+    lines.push('      "note": "précision courte sur pourquoi cette étape/ce délai/ce budget pour ce lieu précis",');
+    lines.push('      "exception_appel": "true uniquement si l\'étape concerne un appel qualifié pour la catégorie Bal fantasy, sinon absent"');
+    lines.push('    }');
+    lines.push('  ],');
+    lines.push('  "questionnaire": {');
+    lines.push('    "bloc_general": ["G01", "G02", "..."],');
+    lines.push('    "bloc_lieu": {');
+    lines.push('      "type_lieu": "L-CH | L-DOM",');
+    lines.push('      "questions": ["L-CH1", "..."]');
+    lines.push('    },');
+    lines.push('    "bloc_format": {');
+    lines.push('      "categories_couvertes_par_ecrit": ["F-VIS", "F-DIN", "..."],');
+    lines.push('      "categories_hors_perimetre": ["F-BAL (appel direct)", "F-PON (devis au cas par cas)"],');
+    lines.push('      "questions_par_categorie": {');
+    lines.push('        "F-VIS": ["F-VIS1", "..."]');
+    lines.push('      }');
+    lines.push('    },');
+    lines.push('    "declencheurs_actifs": ["ex. G15=Oui → filtrage formats feu/musique amplifiée"]');
+    lines.push('  },');
+    lines.push('  "points_a_verifier": ["liste des informations utilisées mais non confirmées, à valider avant d\'envoyer quoi que ce soit au prospect"]');
+    lines.push('}');
+    lines.push("");
+    lines.push("Vérification finale avant de répondre");
+    lines.push("Avant de produire le JSON, relis ta propre sortie et vérifie qu'aucune étape ne propose un appel non sollicité (sauf l'exception Bal fantasy explicitement marquée), qu'aucun tarif plein n'apparaît si {{premier_client_signe}} est false, que les questions sélectionnées correspondent bien au bloc général + au bloc lieu détecté + aux blocs format des catégories envisagées, et que chaque information non confirmée est bien listée dans points_a_verifier.");
+
+    var categoriesVal = (v.categories && v.categories.length)
+      ? v.categories.map(function(k){ return CATEGORY_LABEL[k]||k; }).join(", ")
+      : "aucune fournie — à déduire toi-même à partir des informations ci-dessous";
+
+    return fillPlaceholders(lines.join("\n"), {
+      lieu: v.name || "(non renseigné)",
+      contact: v.contactEmail || v.contactPhone || "non renseigné",
+      categories: categoriesVal,
+      infos_recueillies: v.researchNotes ? v.researchNotes.slice(0,6000) : "(aucune)",
+      historique_echanges: v.gmailSummary ? v.gmailSummary.slice(0,3000) : "(aucun échange connu)",
+      premier_client_signe: (state.kb && state.kb.premierClientSigne) ? "true" : "false"
+    });
   }
 
   function formatGmailSummary(result){
@@ -1638,6 +1811,41 @@
     });
   }
 
+  function mapLieuTypeCode(code){
+    if(code === "L-CH") return "chateau_manoir";
+    if(code === "L-DOM") return "domaine_viticole";
+    return "";
+  }
+
+  function resolveQuestionIds(ids){
+    return (ids||[]).map(function(id){
+      var text = QUESTION_BANK[id];
+      return text ? (id + " " + text) : id;
+    });
+  }
+
+  function buildQuestionnaireFromResponse(q){
+    if(!q) return [];
+    var sections = [];
+    if(q.bloc_general && q.bloc_general.length){
+      sections.push({ section: "Général", questions: resolveQuestionIds(q.bloc_general) });
+    }
+    if(q.bloc_lieu && q.bloc_lieu.questions && q.bloc_lieu.questions.length){
+      var lieuKey = mapLieuTypeCode(q.bloc_lieu.type_lieu);
+      var lieuLabel = LIEU_TYPE_LABEL[lieuKey] || q.bloc_lieu.type_lieu || "Profil du lieu";
+      sections.push({ section: "Profil du lieu — " + lieuLabel, questions: resolveQuestionIds(q.bloc_lieu.questions) });
+    }
+    if(q.bloc_format && q.bloc_format.questions_par_categorie){
+      Object.keys(q.bloc_format.questions_par_categorie).forEach(function(fcode){
+        sections.push({ section: "Format — " + fcode, questions: resolveQuestionIds(q.bloc_format.questions_par_categorie[fcode]) });
+      });
+    }
+    if(q.bloc_format && q.bloc_format.categories_hors_perimetre && q.bloc_format.categories_hors_perimetre.length){
+      sections.push({ section: "Hors périmètre du questionnaire écrit", questions: q.bloc_format.categories_hors_perimetre.slice() });
+    }
+    return sections;
+  }
+
   function generateVenueTunnel(id, forceRefresh){
     if(typeof capSample !== "function"){
       var msg = capSample === undefined
@@ -1652,14 +1860,37 @@
     var v = state.venues.find(function(x){ return x.id === id; });
     capSample.json(buildTunnelPrompt(v), { modelTier: "default", cache: forceRefresh ? false : true }).then(function(data){
       state.venueGenerating = null;
+      data = data || {};
+
+      var tunnelSteps = Array.isArray(data.tunnel) ? data.tunnel.map(function(s){
+        return {
+          step: s.etape || "",
+          timing: s.timing_estime || "",
+          budget: s.budget_estime || "",
+          statutBudget: s.statut_budget || "",
+          notes: s.note || "",
+          exceptionAppel: s.exception_appel === true || s.exception_appel === "true"
+        };
+      }) : [];
+
+      var pointsAVerifier = Array.isArray(data.points_a_verifier) ? data.points_a_verifier.slice() : [];
+      if(data.questionnaire && Array.isArray(data.questionnaire.declencheurs_actifs)){
+        pointsAVerifier = pointsAVerifier.concat(data.questionnaire.declencheurs_actifs);
+      }
+
       var patch = {
-        tunnel: Array.isArray(data && data.tunnel) ? data.tunnel : [],
-        questionnaire: Array.isArray(data && data.questionnaire) ? data.questionnaire : [],
+        tunnel: tunnelSteps,
+        questionnaire: buildQuestionnaireFromResponse(data.questionnaire),
+        pointsAVerifier: pointsAVerifier,
         status: "Tunnel généré"
       };
-      if((!v.categories || !v.categories.length) && data && Array.isArray(data.suggestedCategories) && data.suggestedCategories.length){
-        patch.categories = data.suggestedCategories.filter(function(k){ return !!CATEGORY_LABEL[k]; });
+
+      if(data.profil_lieu_deduit && data.profil_lieu_deduit.type && !v.lieuType){
+        patch.lieuType = LIEU_TYPE_LABEL[data.profil_lieu_deduit.type] ? data.profil_lieu_deduit.type : "autre";
+        patch.lieuTypeStatut = data.profil_lieu_deduit.statut || "à vérifier";
+        patch.lieuTypeJustification = data.profil_lieu_deduit.justification || "";
       }
+
       updateVenue(id, patch);
     }).catch(function(e){
       state.venueGenerating = null;
@@ -1669,9 +1900,14 @@
     });
   }
 
+  var BUDGET_STATUTS = ["confirmé", "estimé", "à vérifier"];
+
   function tunnelStepsHTML(steps){
     if(!steps || !steps.length) return '<div class="analysis-empty">Pas encore de tunnel généré.</div>';
     return steps.map(function(s, i){
+      var statutOptions = BUDGET_STATUTS.map(function(st){
+        return '<option value="'+esc(st)+'"'+(st===s.statutBudget?" selected":"")+'>'+esc(st)+'</option>';
+      }).join("");
       return '<div class="step-row" data-idx="'+i+'">'+
         '<div class="step-head"><span class="step-num">Étape '+(i+1)+'</span>'+
           '<input type="text" data-f="step" value="'+esc(s.step||"")+'" placeholder="Nom de l\'étape" style="flex:1;">'+
@@ -1679,8 +1915,12 @@
         '<div class="step-grid">'+
           '<div class="field"><label>Timing</label><input type="text" data-f="timing" value="'+esc(s.timing||"")+'" placeholder="ex. J+7 jours ouvrés"></div>'+
           '<div class="field"><label>Budget</label><input type="text" data-f="budget" value="'+esc(s.budget||"")+'" placeholder="ex. 2 500–4 000 €"></div>'+
+          '<div class="field"><label>Statut budget</label><select data-f="statutBudget">'+statutOptions+'</select></div>'+
         '</div>'+
         '<textarea data-f="notes" placeholder="Notes">'+esc(s.notes||"")+'</textarea>'+
+        (s.exceptionAppel
+          ? '<label class="tag-check on" style="margin-top:8px;"><input type="checkbox" data-f="exceptionAppel" checked> Exception : appel qualifié (Bal fantasy)</label>'
+          : '<label class="tag-check" style="margin-top:8px;"><input type="checkbox" data-f="exceptionAppel"> Exception : appel qualifié (Bal fantasy)</label>')+
       '</div>';
     }).join("");
   }
@@ -1727,6 +1967,12 @@
     var formuleOptions = '<option value="">—</option>' + FORMULES.map(function(f){
       return '<option value="'+esc(f.key)+'"'+(f.key===v.formule?" selected":"")+'>'+esc(f.label)+'</option>';
     }).join("");
+    var lieuTypeOptions = '<option value="">—</option>' + LIEU_TYPES.map(function(t){
+      return '<option value="'+esc(t.key)+'"'+(t.key===v.lieuType?" selected":"")+'>'+esc(t.label)+'</option>';
+    }).join("");
+    var lieuTypeHint = v.lieuTypeJustification
+      ? '<div class="research-status">'+(v.lieuTypeStatut==="confirmé"?"Confirmé":"À vérifier")+' — '+esc(v.lieuTypeJustification)+'</div>'
+      : "";
 
     var gmailBlock;
     if(!capMcp){
@@ -1754,6 +2000,7 @@
         '<div class="m-field"><label>Téléphone</label><input type="text" id="ven-phone" value="'+esc(v.contactPhone||"")+'"></div>'+
         '<div class="m-field"><label>Statut</label><select id="ven-status" class="status-select">'+statusOptions+'</select></div>'+
         '<div class="m-field"><label>Formule</label><select id="ven-formule">'+formuleOptions+'</select></div>'+
+        '<div class="m-field"><label>Type de lieu</label><select id="ven-lieu-type">'+lieuTypeOptions+'</select>'+lieuTypeHint+'</div>'+
       '</div>'+
       '<div class="m-field"><label>Catégorie(s) envisagée(s)</label><div class="tag-check-group" id="ven-cats">'+catCheckboxesHTML(v.categories||[])+'</div></div>'+
       '<div class="analysis-box"><div class="a-head"><h3>Recherche</h3></div>'+
@@ -1775,6 +2022,10 @@
       '<div class="analysis-box"><div class="a-head"><h3>Questionnaire découverte</h3></div>'+
         '<div id="venue-questionnaire" style="margin-top:12px;">'+questionnaireSectionsHTML(v.questionnaire)+'</div>'+
         '<div class="panel-actions" style="justify-content:flex-start;"><button class="ghost" id="btn-add-section">+ Section</button></div>'+
+      '</div>'+
+      '<div class="analysis-box"><div class="a-head"><h3>Points à vérifier</h3></div>'+
+        '<p class="hint">Informations utilisées dans le tunnel/questionnaire mais non confirmées (déductions, sources tierces, échanges anciens non reconfirmés) — à valider avant d\'envoyer quoi que ce soit au prospect. Une ligne par point.</p>'+
+        '<textarea id="ven-points-verifier" class="kb-textarea" placeholder="—" style="min-height:100px;">'+esc((v.pointsAVerifier||[]).join("\n"))+'</textarea>'+
       '</div>';
 
     document.getElementById("ven-name").addEventListener("blur", function(e){ updateVenue(v.id, { name: e.target.value.trim() }); });
@@ -1782,8 +2033,12 @@
     document.getElementById("ven-phone").addEventListener("blur", function(e){ updateVenue(v.id, { contactPhone: e.target.value.trim() }); });
     document.getElementById("ven-status").addEventListener("change", function(e){ updateVenue(v.id, { status: e.target.value }); });
     document.getElementById("ven-formule").addEventListener("change", function(e){ updateVenue(v.id, { formule: e.target.value }); });
+    document.getElementById("ven-lieu-type").addEventListener("change", function(e){ updateVenue(v.id, { lieuType: e.target.value, lieuTypeStatut: "confirmé", lieuTypeJustification: "Renseigné manuellement par Solenne" }); });
     document.getElementById("ven-research").addEventListener("blur", function(e){ updateVenue(v.id, { researchNotes: e.target.value }); });
     document.getElementById("ven-gmail").addEventListener("blur", function(e){ updateVenue(v.id, { gmailSummary: e.target.value }); });
+    document.getElementById("ven-points-verifier").addEventListener("blur", function(e){
+      updateVenue(v.id, { pointsAVerifier: e.target.value.split("\n").map(function(s){ return s.trim(); }).filter(Boolean) });
+    });
 
     wireCatCheckboxes(document.getElementById("ven-cats"), function(picked){ updateVenue(v.id, { categories: picked }); });
 
@@ -1804,9 +2059,13 @@
     Array.prototype.forEach.call(document.querySelectorAll("#venue-tunnel-steps .step-row"), function(row){
       var idx = parseInt(row.getAttribute("data-idx"), 10);
       Array.prototype.forEach.call(row.querySelectorAll("[data-f]"), function(field){
-        field.addEventListener("blur", function(){
-          v.tunnel[idx][field.getAttribute("data-f")] = field.value;
+        var isCheckable = field.type === "checkbox";
+        var isSelect = field.tagName === "SELECT";
+        var evt = (isCheckable || isSelect) ? "change" : "blur";
+        field.addEventListener(evt, function(){
+          v.tunnel[idx][field.getAttribute("data-f")] = isCheckable ? field.checked : field.value;
           persistTunnel();
+          if(isCheckable) renderVenueDetailModal();
         });
       });
       var rm = row.querySelector('[data-action="rm-step"]');
@@ -1818,7 +2077,7 @@
     });
     document.getElementById("btn-add-step").addEventListener("click", function(){
       v.tunnel = v.tunnel || [];
-      v.tunnel.push({ step: "", timing: "", budget: "", notes: "" });
+      v.tunnel.push({ step: "", timing: "", budget: "", notes: "", statutBudget: "", exceptionAppel: false });
       persistTunnel();
       renderVenueDetailModal();
     });
@@ -1883,6 +2142,7 @@
       lines.push("Contact : " + (v.contactEmail || v.contactPhone || "—"));
       lines.push("Catégorie(s) : " + venueCatLabel(v));
       lines.push("Formule : " + (FORMULE_LABEL[v.formule] || "—"));
+      lines.push("Type de lieu : " + (LIEU_TYPE_LABEL[v.lieuType] || "—") + (v.lieuTypeStatut ? " (" + v.lieuTypeStatut + ")" : ""));
       lines.push("Statut : " + (v.status || "Brouillon"));
       if(v.gmailSummary){ lines.push(""); lines.push("Historique Gmail :"); lines.push(v.gmailSummary); }
       if(v.researchNotes){ lines.push(""); lines.push("Informations recueillies :"); lines.push(v.researchNotes); }
@@ -1892,7 +2152,9 @@
         v.tunnel.forEach(function(s, i){
           lines.push((i+1) + ". " + (s.step||"(étape sans nom)") +
             (s.timing ? " — " + s.timing : "") +
-            (s.budget ? " — " + s.budget : ""));
+            (s.budget ? " — " + s.budget : "") +
+            (s.statutBudget ? " [" + s.statutBudget + "]" : "") +
+            (s.exceptionAppel ? " — EXCEPTION : appel qualifié" : ""));
           if(s.notes) lines.push("   " + s.notes);
         });
       } else {
@@ -1906,6 +2168,11 @@
           lines.push(sec.section || "(section sans nom)");
           (sec.questions||[]).forEach(function(q){ lines.push("- " + q); });
         });
+      }
+      if(v.pointsAVerifier && v.pointsAVerifier.length){
+        lines.push("");
+        lines.push("Points à vérifier :");
+        v.pointsAVerifier.forEach(function(p){ lines.push("- " + p); });
       }
       lines.push("");
     });
@@ -1951,9 +2218,14 @@
   function renderConnaissance(){
     els.kbProcess.value = state.kb.processCommercial || SEED_PROCESS;
     els.kbQuestionnaire.value = state.kb.questionnaireBase || SEED_QUESTIONNAIRE;
+    els.kbPremierClient.checked = !!state.kb.premierClientSigne;
   }
   els.btnSaveKb.addEventListener("click", function(){
-    saveKb({ processCommercial: els.kbProcess.value, questionnaireBase: els.kbQuestionnaire.value });
+    saveKb({
+      processCommercial: els.kbProcess.value,
+      questionnaireBase: els.kbQuestionnaire.value,
+      premierClientSigne: els.kbPremierClient.checked
+    });
     els.kbSaveStatus.textContent = "Enregistré — utilisé pour toutes les prochaines générations de tunnel.";
   });
 
