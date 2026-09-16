@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kleiomné — Outil de prospection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Cormorant+SC:wght@500;600&display=swap">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="eyebrow">Kleiomné — usage interne</div>
+      <h1>Outil de prospection</h1>
+      <p class="sub">Un lieu, une fiche : recherche, tunnel sur-mesure, lien questionnaire — le tout partagé avec la surface publique envoyée au prospect.</p>
+      <nav class="tabs" id="tabs">
+        <button data-route="nouveau" class="tab-btn">Nouveau lieu</button>
+        <button data-route="historique" class="tab-btn">Historique</button>
+      </nav>
+      <div class="settings-bar">
+        <label class="switch-label">
+          <input type="checkbox" id="premierClientSigne">
+          Premier client déjà signé (désactive le tarif pilote pour les <em>nouveaux</em> lieux)
+        </label>
+        <span id="statusBadges" class="status-badges"></span>
+      </div>
+    </header>
+
+    <main id="app"></main>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
