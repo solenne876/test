@@ -4,7 +4,7 @@ const CATEGORIES = [
   { code: "F-MUR", label: "Murder party" },
   { code: "F-ENQ", label: "Enquête immersive / jeu de piste" },
   { code: "F-BAL", label: "Bal fantasy (appel qualifié)" },
-  { code: "F-PON", label: "Événement ponctuel (devis)" },
+  { code: "F-PON", label: "Événement sur-mesure (devis)" },
 ];
 
 const TYPES_LIEU = [
@@ -102,7 +102,7 @@ async function renderNouveau() {
           <select name="type_lieu_force">${TYPES_LIEU.map((t) => `<option value="${t.code}">${t.label}</option>`).join("")}</select>
         </div>
         <div class="field">
-          <label>Catégorie(s) envisagée(s) - laisser vide pour que l'outil les suggère</label>
+          <label>Catégorie(s) envisagée(s) - hypothèse de départ seulement (le Questionnaire 1 tranchera), laisser vide si aucune idée</label>
           <div class="checkbox-row" id="catBox">
             ${CATEGORIES.map((c) => `<label><input type="checkbox" name="categories" value="${c.code}"> ${c.label}</label>`).join("")}
           </div>
@@ -161,7 +161,7 @@ async function renderHistorique() {
     <section class="card">
       <h2>Historique des lieux</h2>
       <table class="historique">
-        <thead><tr><th>Lieu</th><th>Catégories</th><th>Statut</th><th>Questionnaire</th><th>Mis à jour</th></tr></thead>
+        <thead><tr><th>Lieu</th><th>Catégories</th><th>Statut</th><th>Q1</th><th>Q2</th><th>Mis à jour</th></tr></thead>
         <tbody></tbody>
       </table>
     </section>
@@ -169,13 +169,15 @@ async function renderHistorique() {
   const tbody = section.querySelector("tbody");
   for (const lieu of lieux) {
     const cats = (lieu.categories || []).join(", ") || "-";
-    const questionnaireState = lieu.questionnaire_reponses ? "Réponses reçues" : lieu.questionnaire_meta && Object.keys(lieu.questionnaire_meta).length ? "En attente" : "-";
+    const q1State = lieu.questionnaire_1_reponses ? "Reçu" : "En attente";
+    const q2State = lieu.questionnaire_2_reponses ? "Reçu" : lieu.slug_q2 ? "En attente" : "-";
     const tr = el(`
       <tr data-id="${lieu.id}">
         <td>${escapeHtml(lieu.nom)}</td>
         <td>${escapeHtml(cats)}</td>
         <td><span class="pill ${lieu.statut}">${escapeHtml(lieu.statut_label)}</span></td>
-        <td>${escapeHtml(questionnaireState)}</td>
+        <td>${escapeHtml(q1State)}</td>
+        <td>${escapeHtml(q2State)}</td>
         <td>${escapeHtml(lieu.updated_at)}</td>
       </tr>
     `);
@@ -192,9 +194,13 @@ function statutOptions(current) {
     ["nouveau", "Nouveau"],
     ["recherche_en_cours", "Recherche en cours"],
     ["erreur_generation", "Erreur de génération"],
-    ["tunnel_genere", "Tunnel généré"],
-    ["questionnaire_envoye", "Questionnaire envoyé"],
-    ["questionnaire_recu", "Questionnaire reçu, tunnel à affiner"],
+    ["tunnel_genere", "Tunnel généré, Questionnaire 1 prêt"],
+    ["q1_envoye", "Questionnaire 1 envoyé"],
+    ["q1_recu_interet_confirme", "Intérêt confirmé, Questionnaire 2 à générer"],
+    ["q1_recu_exception", "Q1 reçu - hors périmètre écrit (appel/devis)"],
+    ["q2_genere", "Questionnaire 2 généré, à valider"],
+    ["q2_envoye", "Questionnaire 2 envoyé"],
+    ["q2_recu", "Questionnaire 2 reçu, tunnel à affiner"],
     ["tunnel_affine", "Tunnel affiné"],
   ];
   return statuts.map(([v, l]) => `<option value="${v}" ${v === current ? "selected" : ""}>${l}</option>`).join("");
@@ -248,24 +254,30 @@ function exceptionRowHtml(e, idx, label) {
 }
 
 function renderQuestionnaireSection(lieu, id) {
-  const sel = lieu.questionnaire_selection || {};
+  const sel = lieu.questionnaire_2_selection || {};
   const hasContent = (sel.general && sel.general.length) || (sel.lieu && sel.lieu.questions && sel.lieu.questions.length) || (sel.formats && Object.keys(sel.formats).length) || (sel.formatsException && sel.formatsException.length);
 
   const section = el(`
     <section class="card">
       <div class="top-actions" style="margin-bottom:6px">
-        <h2>Questionnaire proposé</h2>
-        <span id="valideBadge" class="badge ${lieu.questionnaire_valide ? "ok" : "err"}">${lieu.questionnaire_valide ? "validé, visible du prospect" : "brouillon, pas encore envoyable"}</span>
+        <h2>Questionnaire 2 (lieu) - proposé</h2>
+        <span id="valideBadge" class="badge ${lieu.questionnaire_2_valide ? "ok" : "err"}">${lieu.questionnaire_2_valide ? "validé, visible du prospect" : "brouillon, pas encore envoyable"}</span>
       </div>
       <p class="small-note">Décoche une question pour l'exclure du lien envoyé au prospect (une réintégration reste possible d'un clic), corrige le texte si besoin. Le lien public n'affiche rien tant que ce n'est pas validé.</p>
       <div id="qSections"></div>
-      <div style="margin-top:16px"><button class="primary" id="toggleValide" type="button">${lieu.questionnaire_valide ? "Modifier à nouveau (repasse en brouillon)" : "Valider le questionnaire"}</button></div>
+      ${hasContent ? `<div style="margin-top:16px"><button class="primary" id="toggleValide" type="button">${lieu.questionnaire_2_valide ? "Modifier à nouveau (repasse en brouillon)" : "Valider le questionnaire"}</button></div>` : ""}
     </section>
   `);
 
   const host = section.querySelector("#qSections");
   if (!hasContent) {
-    host.appendChild(el(`<p class="small-note">Aucune sélection de questions pour l'instant - génère ou régénère le tunnel.</p>`));
+    const msg =
+      lieu.interet_statut === "exception_uniquement"
+        ? "Seules des prestations hors périmètre écrit (Bal fantasy / Événement sur-mesure) ont été cochées au Questionnaire 1 : pas de Questionnaire 2 standard ici, à traiter en appel qualifié ou devis au cas par cas."
+        : lieu.interet_statut === "confirme"
+        ? "Intérêt confirmé au Questionnaire 1 : clique sur « Générer le Questionnaire 2 » ci-dessus pour construire cette sélection."
+        : "En attente de la réponse au Questionnaire 1.";
+    host.appendChild(el(`<p class="small-note">${escapeHtml(msg)}</p>`));
   } else {
     if (sel.general && sel.general.length) {
       host.appendChild(el(`<h3>Général</h3>`));
@@ -287,7 +299,7 @@ function renderQuestionnaireSection(lieu, id) {
   }
 
   async function persistSelection() {
-    await api(`/lieux/${id}`, { method: "PATCH", body: JSON.stringify({ questionnaire_selection: sel }) });
+    await api(`/lieux/${id}`, { method: "PATCH", body: JSON.stringify({ questionnaire_2_selection: sel }) });
   }
 
   function rowRef(sectionKey, idx) {
@@ -319,10 +331,13 @@ function renderQuestionnaireSection(lieu, id) {
     await persistSelection();
   }, true);
 
-  section.querySelector("#toggleValide").addEventListener("click", async () => {
-    await api(`/lieux/${id}`, { method: "PATCH", body: JSON.stringify({ questionnaire_valide: !lieu.questionnaire_valide }) });
-    router();
-  });
+  const toggleBtn = section.querySelector("#toggleValide");
+  if (toggleBtn) {
+    toggleBtn.addEventListener("click", async () => {
+      await api(`/lieux/${id}`, { method: "PATCH", body: JSON.stringify({ questionnaire_2_valide: !lieu.questionnaire_2_valide }) });
+      router();
+    });
+  }
 
   return section;
 }
@@ -339,11 +354,24 @@ async function renderFiche(id) {
     wrap.appendChild(el(`<div class="warning-banner">Recherche / génération en cours pour ce lieu…</div>`));
   }
 
+  let primaryAction = null; // { label, endpoint }
+  if (lieu.questionnaire_2_reponses) {
+    primaryAction = { label: "Régénérer le tunnel avec les réponses du Questionnaire 2", endpoint: `/lieux/${id}/regenerate` };
+  } else if (lieu.interet_statut === "confirme") {
+    primaryAction = {
+      label: lieu.slug_q2 ? "Régénérer le Questionnaire 2" : "Générer le Questionnaire 2",
+      endpoint: `/lieux/${id}/generate-q2`,
+    };
+  }
+
   wrap.appendChild(
     el(`
       <div class="top-actions">
         <h2>${escapeHtml(lieu.nom)} <span class="pill ${lieu.statut}">${escapeHtml(lieu.statut_label)}</span></h2>
-        <button class="secondary" id="regenerateBtn" type="button">${lieu.questionnaire_reponses ? "Régénérer le tunnel avec les réponses reçues" : "Relancer la génération"}</button>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="link-btn" id="regenerateInitialBtn" type="button">Relancer la recherche initiale</button>
+          ${primaryAction ? `<button class="secondary" id="primaryActionBtn" type="button">${escapeHtml(primaryAction.label)}</button>` : ""}
+        </div>
       </div>
     `)
   );
@@ -367,17 +395,28 @@ async function renderFiche(id) {
   `);
   wrap.appendChild(identite);
 
-  // Lien questionnaire
-  const link = `${location.origin}/q/${lieu.slug}`;
+  // Liens questionnaires
+  const linkQ1 = `${location.origin}/q1/${lieu.slug_q1}`;
+  const linkQ2 = lieu.slug_q2 ? `${location.origin}/q2/${lieu.slug_q2}` : null;
   wrap.appendChild(
     el(`
       <section class="card">
-        <h2>Lien questionnaire</h2>
+        <h2>Liens questionnaires</h2>
+        <h3>Questionnaire 1 (intérêt) - à envoyer avec le mail de prospection</h3>
         <div class="link-box">
-          <code>${escapeHtml(link)}</code>
-          <button class="secondary" id="copyLink" type="button">Copier le lien</button>
+          <code>${escapeHtml(linkQ1)}</code>
+          <button class="secondary" id="copyLinkQ1" type="button">Copier le lien</button>
         </div>
-        <p class="small-note">À coller dans le mail de prospection à la place d'un lien générique. Les questions déjà répondues via la recherche sont préremplies côté prospect avec la mention « d'après nos recherches ».</p>
+        <h3>Questionnaire 2 (lieu) - à envoyer une fois l'intérêt confirmé</h3>
+        ${
+          linkQ2
+            ? `<div class="link-box">
+                <code>${escapeHtml(linkQ2)}</code>
+                <button class="secondary" id="copyLinkQ2" type="button">Copier le lien</button>
+              </div>
+              <p class="small-note">${lieu.questionnaire_2_valide ? "Validé - visible du prospect." : "Pas encore validé - le prospect voit une page « en préparation » tant que ce n'est pas fait plus bas."}</p>`
+            : `<p class="small-note">Pas encore généré - en attente de la réponse au Questionnaire 1.</p>`
+        }
       </section>
     `)
   );
@@ -443,13 +482,24 @@ async function renderFiche(id) {
   `);
   wrap.appendChild(sourcesSection);
 
-  // Réponses questionnaire
-  if (lieu.questionnaire_reponses) {
-    const r = lieu.questionnaire_reponses;
+  // Réponses questionnaires
+  if (lieu.questionnaire_1_reponses) {
+    const r = lieu.questionnaire_1_reponses;
     wrap.appendChild(
       el(`
         <section class="card">
-          <h2>Réponses du questionnaire (reçues le ${escapeHtml(r.date_soumission)})</h2>
+          <h2>Réponses du Questionnaire 1 (reçues le ${escapeHtml(r.date_soumission)})</h2>
+          <pre style="white-space:pre-wrap;font-family:inherit;font-size:15px;color:var(--ivory-dim)">${escapeHtml(JSON.stringify(r, null, 2))}</pre>
+        </section>
+      `)
+    );
+  }
+  if (lieu.questionnaire_2_reponses) {
+    const r = lieu.questionnaire_2_reponses;
+    wrap.appendChild(
+      el(`
+        <section class="card">
+          <h2>Réponses du Questionnaire 2 (reçues le ${escapeHtml(r.date_soumission)})</h2>
           <pre style="white-space:pre-wrap;font-family:inherit;font-size:15px;color:var(--ivory-dim)">${escapeHtml(JSON.stringify(r, null, 2))}</pre>
         </section>
       `)
@@ -459,18 +509,37 @@ async function renderFiche(id) {
   app.appendChild(wrap);
 
   // --- interactions ---
-  wrap.querySelector("#regenerateBtn").addEventListener("click", async () => {
-    const b = wrap.querySelector("#regenerateBtn");
+  wrap.querySelector("#regenerateInitialBtn").addEventListener("click", async () => {
+    const b = wrap.querySelector("#regenerateInitialBtn");
     b.disabled = true;
+    const original = b.textContent;
     b.textContent = "Génération en cours…";
     try {
-      await api(`/lieux/${id}/regenerate`, { method: "POST" });
+      await api(`/lieux/${id}/regenerate-initial`, { method: "POST" });
       router();
     } catch (e) {
       alert("Erreur : " + e.message);
       b.disabled = false;
+      b.textContent = original;
     }
   });
+
+  const primaryBtn = wrap.querySelector("#primaryActionBtn");
+  if (primaryBtn && primaryAction) {
+    primaryBtn.addEventListener("click", async () => {
+      primaryBtn.disabled = true;
+      const original = primaryBtn.textContent;
+      primaryBtn.textContent = "Génération en cours…";
+      try {
+        await api(primaryAction.endpoint, { method: "POST" });
+        router();
+      } catch (e) {
+        alert("Erreur : " + e.message);
+        primaryBtn.disabled = false;
+        primaryBtn.textContent = original;
+      }
+    });
+  }
 
   wrap.querySelector("#saveIdentite").addEventListener("click", async () => {
     await api(`/lieux/${id}`, {
@@ -487,13 +556,23 @@ async function renderFiche(id) {
     router();
   });
 
-  wrap.querySelector("#copyLink").addEventListener("click", async () => {
-    await navigator.clipboard.writeText(link);
-    const btn = wrap.querySelector("#copyLink");
+  wrap.querySelector("#copyLinkQ1").addEventListener("click", async () => {
+    await navigator.clipboard.writeText(linkQ1);
+    const btn = wrap.querySelector("#copyLinkQ1");
     const original = btn.textContent;
     btn.textContent = "Copié !";
     setTimeout(() => (btn.textContent = original), 1500);
   });
+
+  const copyLinkQ2Btn = wrap.querySelector("#copyLinkQ2");
+  if (copyLinkQ2Btn) {
+    copyLinkQ2Btn.addEventListener("click", async () => {
+      await navigator.clipboard.writeText(linkQ2);
+      const original = copyLinkQ2Btn.textContent;
+      copyLinkQ2Btn.textContent = "Copié !";
+      setTimeout(() => (copyLinkQ2Btn.textContent = original), 1500);
+    });
+  }
 
   wrap.querySelector("#saveNotes").addEventListener("click", async () => {
     await api(`/lieux/${id}`, { method: "PATCH", body: JSON.stringify({ notes_conversations_claude: wrap.querySelector("#f-notes").value }) });

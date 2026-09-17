@@ -2,8 +2,8 @@ const app = document.getElementById("app");
 const stepperEl = document.getElementById("stepper");
 const pageTitle = document.getElementById("pageTitle");
 
-const slug = location.pathname.replace(/^\/q\/?/, "").split("/")[0];
-const STORAGE_KEY = `kleiomne_questionnaire_${slug}`;
+const slug = location.pathname.replace(/^\/q2\/?/, "").split("/")[0];
+const STORAGE_KEY = `kleiomne_q2_${slug}`;
 
 function el(html) {
   const t = document.createElement("template");
@@ -22,7 +22,7 @@ function escapeHtml(s) {
 
 const state = {
   bank: null, // FORMAT_BLOCKS / LIEU_BLOCKS / FORMAT_EXCEPTIONS / REVEALS / G15_WARNING (labels + branchement)
-  lieu: null, // réponse de /api/public/questionnaire/:slug (curatée, incluses uniquement)
+  lieu: null, // réponse de /api/public/q2/:slug (curatée, incluses uniquement)
   step: 0,
   firstLoad: true,
   answers: {
@@ -134,7 +134,7 @@ function rerenderQuestionInPlace(oldWrapper, q, answersObj, nested) {
 function renderQuestionWithReveals(q, answersObj, nested = false, forceOpen = false, idx) {
   const wrapper = renderQuestion(q, answersObj, { nested, forceOpen });
   wrapper.__idx = idx;
-  const rules = state.bank.REVEALS.filter((r) => r.from === q.id);
+  const rules = state.bank.REVEALS_Q2.filter((r) => r.from === q.id);
   for (const rule of rules) {
     if (answersObj[q.id] === rule.value) {
       for (const revId of rule.reveal) {
@@ -163,10 +163,10 @@ function renderCuratedList(container, questions, answersObj) {
   applyPrefillIfFirstLoad(questions, answersObj);
   const idx = {};
   for (const q of questions) idx[q.id] = q;
-  const revealedIds = new Set(state.bank.REVEALS.flatMap((r) => r.reveal));
+  const revealedIds = new Set(state.bank.REVEALS_Q2.flatMap((r) => r.reveal));
   const topLevel = questions.filter((q) => {
     if (!revealedIds.has(q.id)) return true;
-    const rule = state.bank.REVEALS.find((r) => r.reveal.includes(q.id));
+    const rule = state.bank.REVEALS_Q2.find((r) => r.reveal.includes(q.id));
     return !idx[rule.from]; // pas de déclencheur retenu dans cette liste -> affichage direct
   });
   for (const q of topLevel) {
@@ -299,7 +299,7 @@ function buildSubmissionPayload() {
     type_lieu: state.lieu.type_lieu || null,
     reponses_general: state.answers.general,
     reponses_lieu: state.answers.lieu,
-    formats_selectionnes_standard: formatCodes,
+    formats_affiches: formatCodes,
     reponses_formats,
     formats_exception_selectionnes: state.lieu.formats_exception || [],
     contact_exception: state.answers.contactException,
@@ -311,14 +311,14 @@ function buildSubmissionPayload() {
 }
 
 function buildMailBody(payload) {
-  const lines = [`Réponses au questionnaire découverte - ${payload.lieu_nom}`, ""];
+  const lines = [`Réponses au questionnaire lieu - ${payload.lieu_nom}`, ""];
   lines.push("- Général -");
   for (const [id, val] of Object.entries(payload.reponses_general)) lines.push(`${id}: ${val}`);
   if (payload.type_lieu) {
     lines.push("", `- ${payload.type_lieu} -`);
     for (const [id, val] of Object.entries(payload.reponses_lieu)) lines.push(`${id}: ${val}`);
   }
-  for (const code of payload.formats_selectionnes_standard) {
+  for (const code of payload.formats_affiches) {
     lines.push("", `- ${code} -`);
     for (const [id, val] of Object.entries(payload.reponses_formats[code] || {})) lines.push(`${id}: ${val}`);
   }
@@ -371,7 +371,7 @@ function renderStep4() {
     sendBtn.disabled = true;
     sendBtn.textContent = "Envoi en cours…";
     try {
-      const res = await fetch(`/api/public/questionnaire/${slug}/submit`, {
+      const res = await fetch(`/api/public/q2/${slug}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -389,7 +389,7 @@ function renderStep4() {
   });
   actionsRow.appendChild(sendBtn);
 
-  const mailBtn = el(`<a class="secondary" style="text-decoration:none;display:inline-block;text-align:center" href="mailto:?subject=${encodeURIComponent("Questionnaire découverte - " + payload.lieu_nom)}&body=${encodeURIComponent(buildMailBody(payload))}">Envoyer par email</a>`);
+  const mailBtn = el(`<a class="secondary" style="text-decoration:none;display:inline-block;text-align:center" href="mailto:?subject=${encodeURIComponent("Questionnaire lieu - " + payload.lieu_nom)}&body=${encodeURIComponent(buildMailBody(payload))}">Envoyer par email</a>`);
   actionsRow.appendChild(mailBtn);
 
   app.appendChild(actionsCard);
@@ -421,14 +421,14 @@ async function init() {
   try {
     const [bankRes, lieuRes] = await Promise.all([
       fetch("/api/public/question-bank").then((r) => r.json()),
-      fetch(`/api/public/questionnaire/${slug}`).then((r) => {
+      fetch(`/api/public/q2/${slug}`).then((r) => {
         if (!r.ok) throw new Error("Lien introuvable ou expiré.");
         return r.json();
       }),
     ]);
     state.bank = bankRes;
     state.lieu = lieuRes;
-    pageTitle.textContent = `Questionnaire découverte - ${lieuRes.nom}`;
+    pageTitle.textContent = `Questionnaire lieu - ${lieuRes.nom}`;
 
     if (!lieuRes.pret) {
       renderNotReady();

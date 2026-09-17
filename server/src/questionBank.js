@@ -1,10 +1,14 @@
-// Banque de questions du questionnaire découverte, transcrite depuis
-// prompt-systeme-generation-tunnel.md (contenu des questions) et
-// prompt-branching-questionnaire.md (schéma, arbre de navigation, branchements).
-// Ce module est la SEULE source de vérité pour la banque : le générateur de
-// tunnel (qui sélectionne les IDs pertinents) et le rendu du questionnaire
-// public (surface 2) s'appuient tous les deux dessus.
+// Banque de questions, transcrite depuis prompt-systeme-generation-tunnel.md
+// et prompt-branching-questionnaire.md (deux questionnaires distincts : Q1
+// Intérêt, envoyé tôt avec le mail de prospection, et Q2 Lieu, envoyé après
+// confirmation d'intérêt). Ce module est la SEULE source de vérité pour la
+// banque, utilisée à la fois par le générateur de tunnel et les deux
+// surfaces publiques (/q1/<slug>, /q2/<slug>).
 
+// ---------- Questionnaire 2 (Lieu) - bloc général restant ----------
+// G11, G12, G17 sont posées en Questionnaire 1 (qualification légère) et ne
+// sont jamais reposées ici. G18 est retirée définitivement (doublon de G12,
+// déjà tranché par la réponse au Questionnaire 1).
 export const GENERAL_GROUPS = [
   {
     subtitle: "Identité et histoire",
@@ -34,8 +38,6 @@ export const GENERAL_GROUPS = [
   {
     subtitle: "Objectifs et motivations",
     questions: [
-      { id: "G11", type: "QO", text: "Qu'est-ce qui vous a donné envie d'explorer ce type d'expérience aujourd'hui ?" },
-      { id: "G12", type: "QF", text: "Voyez-vous ça comme un événement ponctuel ou comme une nouvelle offre récurrente ?", options: ["Événement ponctuel", "Nouvelle offre récurrente"] },
       { id: "G13", type: "QO", text: "Avez-vous une échéance précise en tête (inauguration, anniversaire du lieu, ouverture de saison) ?" },
     ],
   },
@@ -48,21 +50,72 @@ export const GENERAL_GROUPS = [
     ],
   },
   {
-    subtitle: "Budget et décision",
-    questions: [
-      { id: "G17", type: "QO", text: "Avez-vous déjà une enveloppe budgétaire en tête, ou souhaitez-vous une proposition selon le format ?" },
-    ],
-  },
-  {
     subtitle: "Vision et ambition",
     questions: [
-      { id: "G18", type: "QF", text: "Si ça fonctionne bien, imaginez-vous reconduire l'expérience plusieurs fois par an ?", options: ["Oui", "Non"] },
       { id: "G19", type: "QF", text: "Seriez-vous ouvert à ce que l'événement serve aussi de vitrine pour attirer d'autres types de clients (privatisations, entreprises) ?", options: ["Oui", "Non"] },
       { id: "G20", type: "QO", text: "Avez-vous des freins ou réticences que vous anticipez déjà ?" },
     ],
   },
 ];
 
+// IDs du bloc général Q2 (toujours affichées en intégralité, "Toutes
+// affichées sur la même étape" - pas de sélection par lieu à ce niveau).
+export const GENERAL_Q2_IDS = GENERAL_GROUPS.flatMap((g) => g.questions.map((q) => q.id));
+
+// ---------- Questionnaire 1 (Intérêt) - qualification légère ----------
+export const QUALIFICATION_LEGERE = [
+  { id: "G11", type: "QO", text: "Qu'est-ce qui vous a donné envie d'explorer ce type d'expérience aujourd'hui ?" },
+  { id: "G12", type: "QF", text: "Voyez-vous ça comme un événement ponctuel ou comme une nouvelle offre récurrente ?", options: ["Ponctuel", "Récurrent", "Je ne sais pas encore"] },
+  { id: "G12a", type: "QF", text: "À quelle fréquence imaginez-vous cela ?", options: ["Quotidien", "Hebdomadaire", "Mensuel", "Saisonnier", "Annuel", "Je ne sais pas encore"] },
+  { id: "G17", type: "QO", text: "Avez-vous déjà une enveloppe budgétaire en tête, ou souhaitez-vous une proposition selon le format ?" },
+];
+
+export const REVEALS_Q1 = [{ from: "G12", value: "Récurrent", reveal: ["G12a"] }];
+
+// ---------- Questionnaire 1 - catalogues (cases à cocher, QC) ----------
+export const PRESTATIONS = [
+  { code: "P-VIS", label: "Visite théâtralisée / nocturne aux chandelles", description: "Un parcours costumé dans votre lieu, de jour ou aux chandelles" },
+  { code: "P-DIN", label: "Dîner immersif", description: "Une soirée à thème scénarisée autour du repas" },
+  { code: "P-MUR", label: "Murder party", description: "Une enquête à énigme jouée en huis clos" },
+  { code: "P-ENQ", label: "Enquête immersive / jeu de piste", description: "Un parcours à énigmes dans vos espaces" },
+  { code: "P-BAL", label: "Bal fantasy", description: "Une soirée dansante costumée dans un univers imaginaire" },
+  { code: "P-PON", label: "Événement sur-mesure", description: "Une idée précise en tête, ou une occasion particulière à célébrer" },
+];
+
+export const SERVICES_COMPLEMENTAIRES = [
+  { code: "A-CHA", label: "Charte narrative / storytelling du lieu", description: "Mise en récit permanente de l'histoire du lieu" },
+  { code: "A-SUP", label: "Supports imprimés in-diegesis", description: "Programme thématisé, indices, flyers dans l'univers de l'événement" },
+  { code: "A-SPJ", label: "Supervision narrative le jour J", description: "" },
+  { code: "A-ACC", label: "Accompagnement annuel / programmation récurrente", description: "" },
+  { code: "A-COM", label: "Supports marketing / communication", description: "" },
+  { code: "A-CAP", label: "Captation photo/vidéo de l'événement", description: "Pour la communication du lieu et de Kleiomné" },
+  { code: "A-FOR", label: "Formation des guides ou du personnel du lieu", description: "À l'animation narrative" },
+];
+
+export const INTERVENANTS_GROUPE_A = [
+  { code: "IA-COM", label: "Comédien(s)" },
+  { code: "IA-MUS", label: "Musicien(s) live" },
+  { code: "IA-TRO", label: "Troubadour / conteur" },
+  { code: "IA-DAN", label: "Danseur(s) / initiation chorégraphique" },
+  { code: "IA-MEN", label: "Meneur de jeu / animateur" },
+  { code: "IA-CBT", label: "Initiation combat d'époque" },
+  { code: "IA-DIV", label: "Diseur de bonne aventure / tarot thématisé" },
+  { code: "IA-CAL", label: "Calligraphe / enlumineur" },
+];
+
+// Affiché uniquement si P-DIN, P-BAL ou P-PON est coché à l'étape 1 (voir
+// REVEALS_Q1_GROUPE_B ci-dessous).
+export const INTERVENANTS_GROUPE_B = [
+  { code: "IB-TRA", label: "Traiteur" },
+  { code: "IB-EST", label: "Professionnels de l'esthétique", description: "Stand maquillage/coiffure/ongles" },
+  { code: "IB-PHO", label: "Animation photo pour les invités", description: "Portraits en costume, etc. - distinct de la captation de l'événement (A-CAP)" },
+  { code: "IB-BOOTH", label: "Photobooth" },
+];
+
+// Prestations qui déclenchent l'affichage du Groupe B (étape 3 du Q1)
+export const GROUPE_B_TRIGGER_PRESTATIONS = ["P-DIN", "P-BAL", "P-PON"];
+
+// ---------- Questionnaire 2 (Lieu) - selon le type de lieu ----------
 export const LIEU_BLOCKS = {
   "L-CH": {
     label: "Château / manoir / demeure historique",
@@ -87,7 +140,7 @@ export const LIEU_BLOCKS = {
   },
 };
 
-// Formats couverts par le questionnaire écrit standard
+// Formats couverts par le questionnaire écrit standard (Questionnaire 2)
 export const FORMAT_BLOCKS = {
   "F-VIS": {
     label: "Visite théâtralisée / nocturne aux chandelles",
@@ -141,31 +194,38 @@ export const FORMAT_BLOCKS = {
   },
 };
 
-// Formats hors périmètre du questionnaire écrit standard : pas de banque de
-// questions, juste un encart explicatif (voir prompt-branching-questionnaire.md §4)
+// Prestations hors périmètre du questionnaire écrit standard (jamais de
+// Questionnaire 2 les concernant - voir §3.3 : exception directe)
 export const FORMAT_EXCEPTIONS = {
   "F-BAL": {
     label: "Bal fantasy",
-    encart: "Ce format se qualifie par échange direct (appel qualifié), le cadrage étant trop complexe pour un questionnaire écrit standard. Un questionnaire sur mesure est construit au cas par cas pendant l'appel.",
-    contactField: true, // numéro de téléphone optionnel
+    encart: "Ce format se qualifie par échange direct (appel qualifié), le cadrage étant trop complexe pour un questionnaire écrit standard.",
+    contactField: true,
   },
   "F-PON": {
-    label: "Événement ponctuel",
-    encart: "Ce format se traite sur devis au cas par cas (anniversaire du lieu, inauguration...).",
+    label: "Événement sur-mesure",
+    encart: "Ce format se traite sur devis au cas par cas.",
     contactField: false,
   },
 };
 
-// Table exhaustive des branchements conditionnels - SEULS branchements à
-// implémenter (prompt-branching-questionnaire.md §3)
-export const REVEALS = [
+// Mapping déterministe Q1 -> Q2 : quelle prestation cochée au Questionnaire 1
+// ouvre quel bloc de questions au Questionnaire 2. Ce mapping est appliqué en
+// code, jamais laissé à l'appréciation du modèle.
+export const PRESTATION_TO_FORMAT = { "P-VIS": "F-VIS", "P-DIN": "F-DIN", "P-MUR": "F-MUR", "P-ENQ": "F-ENQ" };
+export const PRESTATION_TO_EXCEPTION = { "P-BAL": "F-BAL", "P-PON": "F-PON" };
+
+// Table exhaustive des branchements conditionnels du Questionnaire 2 - SEULS
+// branchements à implémenter (le branchement G12 -> G12a appartient au
+// Questionnaire 1, voir REVEALS_Q1 ci-dessus).
+export const REVEALS_Q2 = [
   { from: "L-CH5", value: "Oui", reveal: ["L-CH6"] },
   { from: "F-DIN2", value: "Cuisine sur place", reveal: ["F-DIN3"] },
   { from: "F-MUR4", value: "Petit groupe", reveal: ["F-MUR6", "F-MUR7"] },
 ];
 
-// Avertissement G15 (prompt-branching-questionnaire.md §5) : uniquement F-VIS,
-// et seulement si G15 a déjà une réponse au moment où l'étape 3 est atteinte.
+// Avertissement G15 (lieu classé/protégé) - uniquement F-VIS, et seulement si
+// G15 a déjà une réponse au moment où le bloc F-VIS est atteint.
 export const G15_WARNING = {
   triggerQuestion: "G15",
   triggerValue: "Oui",
@@ -176,22 +236,31 @@ export const G15_WARNING = {
 export function allQuestionsById() {
   const map = {};
   for (const group of GENERAL_GROUPS) for (const q of group.questions) map[q.id] = q;
+  for (const q of QUALIFICATION_LEGERE) map[q.id] = q;
   for (const block of Object.values(LIEU_BLOCKS)) for (const q of block.questions) map[q.id] = q;
   for (const block of Object.values(FORMAT_BLOCKS)) for (const q of block.questions) map[q.id] = q;
   return map;
 }
 
 export function questionBankSummaryForPrompt() {
-  // Format compact injecté dans le prompt système de génération du tunnel,
-  // pour que le modèle sélectionne des IDs valides (bloc_general/bloc_lieu/bloc_format).
   const lines = [];
-  lines.push("Bloc général (tout prospect) : " + GENERAL_GROUPS.flatMap((g) => g.questions.map((q) => q.id)).join(", "));
+  lines.push("--- Questionnaire 1 (Intérêt, statique, envoyé tôt) ---");
+  lines.push("Prestations (case à cocher, une par catégorie) : " + PRESTATIONS.map((p) => p.code).join(", "));
+  lines.push("Services complémentaires (cases à cocher) : " + SERVICES_COMPLEMENTAIRES.map((s) => s.code).join(", "));
+  lines.push("Intervenants groupe A (toujours affiché) : " + INTERVENANTS_GROUPE_A.map((i) => i.code).join(", "));
+  lines.push("Intervenants groupe B (affiché si P-DIN/P-BAL/P-PON coché) : " + INTERVENANTS_GROUPE_B.map((i) => i.code).join(", "));
+  lines.push("Qualification légère : " + QUALIFICATION_LEGERE.map((q) => q.id).join(", ") + " (G12a affichée seulement si G12=Récurrent)");
+  lines.push("");
+  lines.push("--- Questionnaire 2 (Lieu, envoyé après confirmation d'intérêt) ---");
+  lines.push("Bloc général restant (toujours affiché en intégralité) : " + GENERAL_Q2_IDS.join(", "));
   for (const [key, block] of Object.entries(LIEU_BLOCKS)) {
     lines.push(`Bloc lieu ${key} (${block.label}) : ` + block.questions.map((q) => q.id).join(", "));
   }
   for (const [key, block] of Object.entries(FORMAT_BLOCKS)) {
-    lines.push(`Bloc format ${key} (${block.label}) : ` + block.questions.map((q) => q.id).join(", "));
+    lines.push(`Bloc format ${key} (${block.label}), affiché uniquement si P-xx correspondant coché au Q1 : ` + block.questions.map((q) => q.id).join(", "));
   }
   lines.push("Formats hors périmètre écrit : F-BAL (appel qualifié), F-PON (devis au cas par cas)");
+  lines.push("");
+  lines.push("Important : la sélection des blocs de format du Questionnaire 2 est déterminée par le code à partir des prestations cochées au Questionnaire 1 (mapping P-xx -> F-xx), pas par toi. Le bloc général et le bloc lieu du Questionnaire 2 sont toujours affichés en intégralité, sans sélection de sous-ensemble à faire de ton côté.");
   return lines.join("\n");
 }

@@ -1,0 +1,50 @@
+:root{
+  --navy: #211f38; --navy-2: #2b2850; --navy-3: #34305f;
+  --ivory: #FDF6E4; --ivory-dim: #cfc7ad; --gold: #C9A84C; --gold-soft: #e3cd8e;
+  --terracotta: #C06840; --hairline: rgba(253,246,228,0.14); --hairline-strong: rgba(253,246,228,0.26);
+  --shadow: 0 18px 40px -20px rgba(0,0,0,0.55); --radius: 10px;
+}
+*{ box-sizing: border-box; }
+html{ color-scheme: dark; }
+body{ margin:0; background: var(--navy); color: var(--ivory); font-family:"Cormorant Garamond", Georgia, serif; font-size: 18px; line-height:1.55; padding: 0 20px 90px; }
+h1,h2,h3{ font-family:"Cinzel", Georgia, serif; font-weight:600; margin:0; }
+.wrap{ max-width: 760px; margin: 0 auto; }
+header{ padding: 44px 0 20px; border-bottom: 1px solid var(--hairline); margin-bottom: 26px; }
+.eyebrow{ color: var(--gold); font-size: 13px; text-transform: uppercase; letter-spacing: .14em; margin-bottom: 8px; }
+header h1{ font-size: clamp(26px, 5vw, 34px); }
+header p.sub{ margin-top: 10px; color: var(--ivory-dim); font-style: italic; }
+.stepper{ display:flex; gap: 6px; margin-top: 22px; }
+.stepper .dot{ flex:1; height: 4px; border-radius: 3px; background: var(--hairline-strong); }
+.stepper .dot.active, .stepper .dot.done{ background: var(--gold); }
+
+.card{ background: var(--navy-2); border: 1px solid var(--hairline); border-radius: var(--radius); padding: 26px; margin-bottom: 20px; box-shadow: var(--shadow); }
+.card h2{ font-size: 20px; margin-bottom: 6px; }
+.card .intro{ color: var(--ivory-dim); font-size: 15.5px; margin-bottom: 18px; }
+.group-title{ font-family:"Cormorant SC", serif; text-transform: uppercase; letter-spacing:.08em; color: var(--gold-soft); font-size: 14px; margin: 22px 0 10px; }
+.group-title:first-child{ margin-top: 0; }
+
+.question{ margin-bottom: 18px; }
+.question .qtext{ font-size: 17px; margin-bottom: 8px; }
+.question textarea{ width:100%; min-height: 64px; background: var(--navy-3); border: 1px solid var(--hairline); color: var(--ivory); font-family: inherit; font-size: 16px; padding: 10px; border-radius: 6px; resize: vertical; }
+.pill-row{ display:flex; flex-wrap: wrap; gap: 8px; }
+.pill-btn{ background: var(--navy-3); border: 1px solid var(--hairline-strong); color: var(--ivory); padding: 8px 16px; border-radius: 999px; cursor: pointer; font-family: inherit; font-size: 15.5px; }
+.pill-btn.selected{ background: var(--gold); border-color: var(--gold); color: var(--navy); font-weight: 600; }
+
+.catalog-item{ display:flex; align-items:flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--hairline); cursor:pointer; }
+.catalog-item:last-child{ border-bottom: none; }
+.catalog-item input{ margin-top: 4px; transform: scale(1.2); }
+.catalog-item .label{ font-size: 17px; }
+.catalog-item .desc{ font-size: 14px; color: var(--ivory-dim); margin-top: 2px; }
+
+.nav-row{ display:flex; justify-content: space-between; margin-top: 8px; align-items: center; }
+button.primary{ background: var(--gold); color: var(--navy); border:none; font-weight:700; font-family:"Cormorant SC", serif; text-transform: uppercase; letter-spacing:.06em; padding: 12px 26px; border-radius: 8px; cursor:pointer; font-size: 15px; }
+button.secondary{ background: transparent; color: var(--ivory); border: 1px solid var(--hairline-strong); font-family:"Cormorant SC", serif; text-transform: uppercase; letter-spacing:.06em; padding: 10px 20px; border-radius: 8px; cursor:pointer; font-size: 14px; }
+button.link-btn{ background:none; border:none; color: var(--ivory-dim); text-decoration:underline; cursor:pointer; font-family:inherit; font-size:14px; }
+
+.recap-block{ margin-bottom: 16px; }
+.recap-block h3{ font-size: 15px; color: var(--gold-soft); font-family:"Cormorant SC", serif; text-transform: uppercase; letter-spacing:.06em; margin-bottom: 6px; }
+.recap-item{ font-size: 15.5px; margin-bottom: 4px; color: var(--ivory-dim); }
+.recap-item b{ color: var(--ivory); }
+.empty-state{ text-align:center; color: var(--ivory-dim); font-style: italic; padding: 50px 0; }
+.footer-actions{ display:flex; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+.confirm-banner{ background: rgba(143,174,139,0.14); border: 1px solid rgba(143,174,139,0.4); color: #cfe3cc; padding: 16px; border-radius: 8px; text-align:center; }

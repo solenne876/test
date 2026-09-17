@@ -64,6 +64,7 @@ export async function generateTunnel({
   typeLieuForce,
   infosRecueilliesTexte,
   historiqueEchangesTexte,
+  q1ReponsesTexte,
   premierClientSigne,
 }) {
   const anthropic = getClient();
@@ -82,6 +83,7 @@ export async function generateTunnel({
     typeLieuForce,
     infosRecueillies: infosRecueilliesTexte,
     historiqueEchanges: historiqueEchangesTexte,
+    q1Reponses: q1ReponsesTexte,
     premierClientSigne,
   });
 

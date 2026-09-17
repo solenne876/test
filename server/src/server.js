@@ -11,7 +11,8 @@ import { publicRouter } from "./routes/public.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..", "..");
 const PUBLIC_INTERNAL = path.join(ROOT, "public", "internal");
-const PUBLIC_Q = path.join(ROOT, "public", "q");
+const PUBLIC_Q1 = path.join(ROOT, "public", "q1");
+const PUBLIC_Q2 = path.join(ROOT, "public", "q2");
 
 const app = express();
 app.use(cors());
@@ -48,10 +49,15 @@ function requireInternalAuth(req, res, next) {
 app.use("/api/public", publicRouter);
 app.use("/api", requireInternalAuth, internalRouter);
 
-// Surface 2 - lien public par lieu (outil.toi/q/<slug>), sans authentification
-app.use("/q", express.static(PUBLIC_Q));
-app.get("/q/:slug", (req, res) => {
-  res.sendFile(path.join(PUBLIC_Q, "index.html"));
+// Surface 2 - liens publics par lieu, sans authentification : Questionnaire 1
+// (intérêt, /q1/<slug>) et Questionnaire 2 (lieu, /q2/<slug>)
+app.use("/q1", express.static(PUBLIC_Q1));
+app.get("/q1/:slug", (req, res) => {
+  res.sendFile(path.join(PUBLIC_Q1, "index.html"));
+});
+app.use("/q2", express.static(PUBLIC_Q2));
+app.get("/q2/:slug", (req, res) => {
+  res.sendFile(path.join(PUBLIC_Q2, "index.html"));
 });
 
 // Surface 1 - interface interne, protégée par Basic Auth si configuré (voir
